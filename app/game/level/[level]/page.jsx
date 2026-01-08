@@ -6,6 +6,9 @@ import Image from "next/image";
 import SpellHUD from "../../components/SpellHUD";
 import GestureCamera from "../../components/GestureCamera";
 import SpellProjectile from "../../components/SpellProjectile";
+import NinjaEnemy from "../../components/NinjaEnemy";
+import EnemyProjectile from "../../components/EnemyProjectile";
+import HealthBar from "../../components/HealthBar";
 
 export default function LevelPage({ params }) {
   const { level } = use(params);
@@ -23,9 +26,28 @@ export default function LevelPage({ params }) {
   const [activeProjectiles, setActiveProjectiles] = useState([]);
   const projectileIdRef = useRef(0);
   
+  // État du joueur
+  const [playerHealth, setPlayerHealth] = useState(10);
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [isInvincible, setIsInvincible] = useState(false);
+  
+  // État des ennemis
+  const [ninjas, setNinjas] = useState([]);
+  const [enemyProjectiles, setEnemyProjectiles] = useState([]);
+  const enemyProjectileIdRef = useRef(0);
+  const [currentNinjaIndex, setCurrentNinjaIndex] = useState(0);
+  const TOTAL_NINJAS = 5;
+  
   // Utiliser useRef pour les valeurs qui ne nécessitent pas de re-render
   const bgWidthRef = useRef(1920);
   const scrollSpeedRef = useRef(3);
+  
+  // Configuration des dégâts
+  const SPELL_DAMAGE = {
+    fireball: 3,
+    ice: 2,
+    thunder: 2
+  };
 
   // Calcul de la largeur du background basé sur la hauteur de l'écran
   useEffect(() => {
@@ -47,6 +69,197 @@ export default function LevelPage({ params }) {
   useEffect(() => {
     isPausedRef.current = isPaused;
   }, [isPaused]);
+  
+  // Gestion des ninjas - Spawn du premier ninja puis les suivants
+  useEffect(() => {
+    if (isGameOver || isPaused) return;
+    
+    // Spawn du premier ninja au démarrage (après 2 secondes)
+    if (ninjas.length === 0 && currentNinjaIndex === 0) {
+      setTimeout(() => {
+        spawnNinja(0);
+      }, 2000);
+    }
+  }, [isGameOver, isPaused, ninjas.length, currentNinjaIndex]);
+  
+  // Fonction pour faire apparaître un ninja
+  const spawnNinja = (index) => {
+    if (index >= TOTAL_NINJAS) return; // Plus de ninjas à faire apparaître
+    
+    const newNinja = {
+      id: `ninja-${index}`,
+      startX: window.innerWidth + 100, // Spawn à droite de l'écran
+      startY: window.innerHeight * 0.76, // Plus bas (75% au lieu de 70%)
+      health: 5,
+      index: index
+    };
+    
+    setNinjas([newNinja]); // Un seul ninja à la fois
+  };
+  
+  // Gestion de la mort d'un ninja
+  const handleNinjaDeath = (ninjaId) => {
+    console.log('Ninja mort:', ninjaId);
+    setNinjas(prev => prev.filter(n => n.id !== ninjaId));
+    
+    // Incrémenter le compteur de ninjas traités (morts ou ayant touché le joueur)
+    const ninjasProcessed = currentNinjaIndex + 1;
+    console.log(`Ninjas traités: ${ninjasProcessed} / ${TOTAL_NINJAS}`);
+    
+    // Faire apparaître le prochain ninja après un délai
+    const nextIndex = currentNinjaIndex + 1;
+    if (nextIndex < TOTAL_NINJAS) {
+      setTimeout(() => {
+        setCurrentNinjaIndex(nextIndex);
+        spawnNinja(nextIndex);
+      }, 2000); // 2 secondes avant le prochain ninja
+    } else {
+      // Tous les ninjas ont été traités - Victoire !
+      console.log('🎉 Tous les ninjas ont été vaincus !');
+      // Note: On ne fait pas de game over ici car c'est une victoire
+    }
+  };
+  
+  // Gestion de l'arrivée d'un ninja au joueur (corps à corps)
+  const handleNinjaReachPlayer = (ninjaId, damage) => {
+    console.log('Ninja atteint le joueur:', ninjaId, 'dégâts:', damage);
+    playerTakeDamage(damage);
+    
+    // Retirer le ninja qui a attaqué
+    setNinjas(prev => prev.filter(n => n.id !== ninjaId));
+    
+    // Incrémenter le compteur de ninjas traités
+    const ninjasProcessed = currentNinjaIndex + 1;
+    console.log(`Ninjas traités: ${ninjasProcessed} / ${TOTAL_NINJAS}`);
+    
+    // Faire apparaître le prochain ninja
+    const nextIndex = currentNinjaIndex + 1;
+    if (nextIndex < TOTAL_NINJAS) {
+      setTimeout(() => {
+        setCurrentNinjaIndex(nextIndex);
+        spawnNinja(nextIndex);
+      }, 2000);
+    } else {
+      // Tous les ninjas ont été traités
+      console.log('🎉 Tous les ninjas sont passés !');
+    }
+  };
+  
+  // Gestion du sort lancé par un ninja
+  const handleNinjaSpellCast = (spellData) => {
+    console.log('Ninja lance un sort:', spellData);
+    setEnemyProjectiles(prev => [...prev, {
+      ...spellData,
+      id: `enemy-spell-${enemyProjectileIdRef.current++}`
+    }]);
+  };
+  
+  // Gestion des dégâts au joueur
+  const playerTakeDamage = (damage) => {
+    if (isInvincible || isGameOver) return;
+    
+    setPlayerHealth(prev => {
+      const newHealth = Math.max(0, prev - damage);
+      
+      if (newHealth <= 0) {
+        setIsGameOver(true);
+      }
+      
+      return newHealth;
+    });
+    
+    // Invincibilité temporaire de 1 seconde
+    setIsInvincible(true);
+    setTimeout(() => {
+      setIsInvincible(false);
+    }, 1000);
+  };
+  
+  // Détection des collisions entre sorts du joueur et ninjas
+  useEffect(() => {
+    if (isPaused || isGameOver) return;
+    
+    const checkInterval = setInterval(() => {
+      // Pour chaque projectile du joueur
+      activeProjectiles.forEach(projectile => {
+        const projectileEl = document.querySelector(`[data-projectile-id="${projectile.id}"][data-projectile-type="player"]`);
+        if (!projectileEl) {
+          // console.log(`❌ Projectile ${projectile.id} non trouvé dans le DOM`);
+          return;
+        }
+        
+        const projectileRect = projectileEl.getBoundingClientRect();
+        
+        // Pour chaque ninja
+        ninjas.forEach(ninja => {
+          const ninjaEl = document.querySelector(`[data-enemy-id="${ninja.id}"]`);
+          if (!ninjaEl) {
+            // console.log(`❌ Ninja ${ninja.id} non trouvé dans le DOM`);
+            return;
+          }
+          
+          const ninjaRect = ninjaEl.getBoundingClientRect();
+          
+          // Vérifier la collision (AABB simple avec une marge de tolérance)
+          const margin = 20; // Marge de tolérance pour faciliter les collisions
+          if (
+            projectileRect.left < ninjaRect.right + margin &&
+            projectileRect.right > ninjaRect.left - margin &&
+            projectileRect.top < ninjaRect.bottom + margin &&
+            projectileRect.bottom > ninjaRect.top - margin
+          ) {
+            // Collision détectée !
+            console.log(`💥 Collision: Sort ${projectile.spell?.element} touche ninja ${ninja.id}, santé avant: ${ninja.health}`);
+            
+            // Infliger des dégâts au ninja
+            const damage = SPELL_DAMAGE[projectile.spell?.element] || 1;
+            const newHealth = ninja.health - damage;
+            
+            console.log(`   ➡️ Dégâts: ${damage}, nouvelle santé: ${newHealth}`);
+            
+            setNinjas(prev => prev.map(n => 
+              n.id === ninja.id 
+                ? { ...n, health: newHealth }
+                : n
+            ));
+            
+            // Détruire le projectile
+            setActiveProjectiles(prev => prev.filter(p => p.id !== projectile.id));
+          }
+        });
+      });
+      
+      // Pour chaque projectile ennemi
+      enemyProjectiles.forEach(enemyProj => {
+        const projEl = document.querySelector(`[data-projectile-id="${enemyProj.id}"][data-projectile-type="enemy"]`);
+        if (!projEl) return;
+        
+        const projRect = projEl.getBoundingClientRect();
+        const playerEl = document.querySelector('.character-position');
+        if (!playerEl) return;
+        
+        const playerRect = playerEl.getBoundingClientRect();
+        
+        // Vérifier collision avec le joueur
+        if (
+          projRect.left < playerRect.right &&
+          projRect.right > playerRect.left &&
+          projRect.top < playerRect.bottom &&
+          projRect.bottom > playerRect.top
+        ) {
+          console.log('Collision: Sort ennemi touche le joueur');
+          
+          // Infliger des dégâts
+          playerTakeDamage(enemyProj.damage || 1);
+          
+          // Détruire le projectile
+          setEnemyProjectiles(prev => prev.filter(p => p.id !== enemyProj.id));
+        }
+      });
+    }, 50); // Vérifier toutes les 50ms
+    
+    return () => clearInterval(checkInterval);
+  }, [activeProjectiles, ninjas, enemyProjectiles, isPaused, isGameOver, isInvincible]);
 
   // Animation du background qui défile
   useEffect(() => {
@@ -106,6 +319,8 @@ export default function LevelPage({ params }) {
 
   // Fonction pour lancer un sort
   const launchSpell = (spell) => {
+    if (isGameOver) return;
+    
     // 1. Changer la pose du personnage
     setCharacterPose('fireball');
     
@@ -151,6 +366,11 @@ export default function LevelPage({ params }) {
   const handleProjectileDestroy = (id) => {
     setActiveProjectiles(prev => prev.filter(p => p.id !== id));
   };
+  
+  // Callback quand un projectile ennemi doit être détruit
+  const handleEnemyProjectileDestroy = (id) => {
+    setEnemyProjectiles(prev => prev.filter(p => p.id !== id));
+  };
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-black" style={{ zIndex: 1 }}>
@@ -186,7 +406,7 @@ export default function LevelPage({ params }) {
         </div>
 
         {/* Le personnage (fixe sur le sol à gauche de l'écran) */}
-        <div className="absolute left-[5%] bottom-[14%] z-10 character-position">
+        <div className={`absolute left-[5%] bottom-[14%] z-10 character-position ${isInvincible ? 'animate-pulse' : ''}`}>
           <div className="relative w-32 h-32 md:w-48 md:h-48">
             <Image
               src={
@@ -201,7 +421,22 @@ export default function LevelPage({ params }) {
           </div>
         </div>
 
-        {/* Projectiles de sorts */}
+        {/* Ninjas ennemis */}
+        {ninjas.map(ninja => (
+          <NinjaEnemy
+            key={ninja.id}
+            id={ninja.id}
+            startX={ninja.startX}
+            startY={ninja.startY}
+            health={ninja.health}
+            onReachPlayer={handleNinjaReachPlayer}
+            onDeath={handleNinjaDeath}
+            onSpellCast={handleNinjaSpellCast}
+            scrollSpeed={scrollSpeedRef.current}
+          />
+        ))}
+
+        {/* Projectiles de sorts du joueur */}
         {activeProjectiles.map(projectile => (
           <SpellProjectile
             key={projectile.id}
@@ -212,6 +447,21 @@ export default function LevelPage({ params }) {
             onDestroy={handleProjectileDestroy}
           />
         ))}
+        
+        {/* Projectiles ennemis */}
+        {enemyProjectiles.map(projectile => (
+          <EnemyProjectile
+            key={projectile.id}
+            id={projectile.id}
+            startX={projectile.startX}
+            startY={projectile.startY}
+            damage={projectile.damage}
+            onDestroy={handleEnemyProjectileDestroy}
+          />
+        ))}
+        
+        {/* Barre de vie du joueur */}
+        <HealthBar currentHealth={playerHealth} maxHealth={10} />
 
         {/* Interface overlay */}
         <div className="absolute top-0 left-0 right-0 p-4 z-20 bg-linear-to-b from-black/60 to-transparent">
@@ -241,7 +491,7 @@ export default function LevelPage({ params }) {
         </div>
 
         {/* Menu Pause (overlay complet) */}
-        {isPaused && (
+        {isPaused && !isGameOver && (
           <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-30 flex items-center justify-center">
             <div className="bg-slate-800 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border-2 border-purple-500">
               <h2 className="text-4xl font-bold text-white text-center mb-6">
@@ -274,6 +524,42 @@ export default function LevelPage({ params }) {
               <p className="text-gray-400 text-center mt-6 text-sm">
                 Appuyez sur <kbd className="px-2 py-1 bg-slate-700 rounded">Échap</kbd> pour reprendre
               </p>
+            </div>
+          </div>
+        )}
+        
+        {/* Écran Game Over */}
+        {isGameOver && (
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-md z-40 flex items-center justify-center">
+            <div className="bg-linear-to-br from-red-900 to-gray-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border-2 border-red-500">
+              <h2 className="text-5xl font-bold text-red-400 text-center mb-4 animate-pulse">
+                💀 GAME OVER
+              </h2>
+              
+              <div className="bg-black/50 rounded-lg p-4 mb-6">
+                <p className="text-white text-center text-lg mb-2">
+                  Ninjas affrontés: <span className="font-bold text-yellow-400">{currentNinjaIndex} / {TOTAL_NINJAS}</span>
+                </p>
+                <p className="text-gray-400 text-center text-sm">
+                  Vous avez combattu vaillamment !
+                </p>
+              </div>
+              
+              <div className="space-y-4">
+                <button
+                  onClick={() => window.location.reload()}
+                  className="w-full px-6 py-4 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-xl transition-colors text-lg"
+                >
+                  🔄 Réessayer
+                </button>
+                
+                <Link
+                  href="/game"
+                  className="block w-full px-6 py-4 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-xl transition-colors text-center"
+                >
+                  🏠 Menu Principal
+                </Link>
+              </div>
             </div>
           </div>
         )}

@@ -163,6 +163,8 @@ export default function SpellProjectile({
           zIndex: 26,
           filter: 'drop-shadow(0 0 20px rgba(255, 165, 0, 0.8))'
         }}
+        data-projectile-id={id}
+        data-projectile-type="player"
       >
         {/* Pour l'instant on utilise particle.svg, mais on pourrait avoir spell.svg */}
         <Image
