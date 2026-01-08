@@ -26,6 +26,11 @@ export default function LevelPage({ params }) {
   const [activeProjectiles, setActiveProjectiles] = useState([]);
   const projectileIdRef = useRef(0);
   
+  // Cooldown des sorts (1 seconde)
+  const [spellCooldown, setSpellCooldown] = useState(false);
+  const lastSpellTimeRef = useRef(0);
+  const SPELL_COOLDOWN_MS = 300; // 1 seconde
+  
   // État du chargement et détection des mains
   const [isLoading, setIsLoading] = useState(true);
   const [handsDetected, setHandsDetected] = useState(false);
@@ -50,7 +55,7 @@ export default function LevelPage({ params }) {
   // Configuration des dégâts
   const SPELL_DAMAGE = {
     fireball: 3,
-    ice: 2,
+    ice: 3,
     thunder: 2
   };
 
@@ -355,8 +360,24 @@ export default function LevelPage({ params }) {
   const launchSpell = (spell) => {
     if (isGameOver) return;
     
-    // 1. Changer la pose du personnage
-    setCharacterPose('fireball');
+    // Vérifier le cooldown
+    const now = Date.now();
+    if (spellCooldown || (now - lastSpellTimeRef.current) < SPELL_COOLDOWN_MS) {
+      console.log('Sort en cooldown, veuillez attendre...');
+      return;
+    }
+    
+    // Activer le cooldown
+    setSpellCooldown(true);
+    lastSpellTimeRef.current = now;
+    
+    // Désactiver le cooldown après 1 seconde
+    setTimeout(() => {
+      setSpellCooldown(false);
+    }, SPELL_COOLDOWN_MS);
+    
+    // 1. Changer la pose du personnage selon le sort
+    setCharacterPose(spell.pose || 'fireball');
     
     // 2. Créer le projectile
     const characterElement = document.querySelector('.character-position');
@@ -452,6 +473,8 @@ export default function LevelPage({ params }) {
               src={
                 characterPose === 'fireball' 
                   ? `/MC/MC-pose-fireball.svg`
+                  : characterPose === 'ice'
+                  ? `/MC/MC-pose-ice.svg`
                   : `/MC/MC-pose-neutral-${characterFrame}.svg`
               }
               alt="Main Character"
@@ -662,6 +685,7 @@ export default function LevelPage({ params }) {
         <SpellHUD 
           detectedSpell={detectedGesture}
           onSpellReady={handleSpellReady}
+          spellCooldown={spellCooldown}
         />
 
         {/* Caméra et détection de gestes */}

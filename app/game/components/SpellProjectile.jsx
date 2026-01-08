@@ -29,7 +29,21 @@ export default function SpellProjectile({
       particleCount: 8,
       particleSize: 40,
       color: 'orange',
-      rotation: true
+      rotation: true,
+      spellImage: '/spell/fire/particle.svg',
+      particleImage: '/spell/fire/particle.svg',
+      shadowColor: 'rgba(255, 165, 0, 0.8)'
+    },
+    ice: {
+      speed: 15,
+      size: 90,
+      particleCount: 6,
+      particleSize: 35,
+      color: 'cyan',
+      rotation: false, // Pas de rotation pour la flèche
+      spellImage: '/spell/ice/spell.svg',
+      particleImage: '/spell/ice/particule.svg',
+      shadowColor: 'rgba(0, 255, 255, 0.8)'
     }
   };
 
@@ -139,7 +153,7 @@ export default function SpellProjectile({
           }}
         >
           <Image
-            src="/spell/fire/particle.svg"
+            src={spellConfig.particleImage}
             alt="particle"
             width={particle.size}
             height={particle.size}
@@ -161,14 +175,13 @@ export default function SpellProjectile({
           height: `${spellConfig.size}px`,
           transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
           zIndex: 26,
-          filter: 'drop-shadow(0 0 20px rgba(255, 165, 0, 0.8))'
+          filter: `drop-shadow(0 0 20px ${spellConfig.shadowColor})`
         }}
         data-projectile-id={id}
         data-projectile-type="player"
       >
-        {/* Pour l'instant on utilise particle.svg, mais on pourrait avoir spell.svg */}
         <Image
-          src="/spell/fire/particle.svg"
+          src={spellConfig.spellImage}
           alt={spell.name}
           fill
           className="object-contain"

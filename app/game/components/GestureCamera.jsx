@@ -84,7 +84,8 @@ export default function GestureCamera({ onGestureDetected, onHandsDetected, isAc
         // 5. Initialiser le GestureRecognizer
         gestureRecognizerRef.current = new GestureRecognizer({
           maxTrailLength: 40, // Réduit de 80 à 40 (0.67s au lieu de 1.3s)
-          circleThreshold: 0.85 // Seuil pour le cercle
+          circleThreshold: 0.85, // Seuil pour le cercle
+          horizontalLineThreshold: 0.6 // Seuil plus bas pour faciliter la détection
         });
 
         setIsReady(true);
@@ -345,24 +346,6 @@ export default function GestureCamera({ onGestureDetected, onHandsDetected, isAc
         style={{ zIndex: 50, width: '100%', height: '100%' }}
       />
 
-      {/* Indicateur de statut (en haut à droite) */}
-      {!isReady && (
-        <div className="fixed top-4 right-[50%] bg-black/80 backdrop-blur-sm p-4 rounded-lg border-2 border-purple-500" style={{ zIndex: 60 }}>
-          <div className="text-white text-center">
-            <div className="animate-spin text-4xl mb-2">⭕</div>
-            <p className="text-sm">Initialisation caméra...</p>
-          </div>
-        </div>
-      )}
-
-      {/* Badge de statut une fois prêt */}
-      {isReady && (
-        <div className="fixed top-4 right-[50%] left-[50%] w-max bg-purple-900/90 backdrop-blur-sm px-4 py-2 rounded-full border-2 border-purple-500" style={{ zIndex: 60 }}>
-          <p className="text-white text-xs font-semibold">
-            🎯 Détection active
-          </p>
-        </div>
-      )}
     </>
   );
 }
