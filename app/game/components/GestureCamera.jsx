@@ -10,7 +10,7 @@ import { GestureRecognizer } from "../../../lib/gesture/GestureRecognizer.js";
  * - Dessine la trajectoire de la paume (points jaunes)
  * - Détecte les gestes (cercle pour l'instant)
  */
-export default function GestureCamera({ onGestureDetected, isActive = true }) {
+export default function GestureCamera({ onGestureDetected, onHandsDetected, isActive = true }) {
   const videoRef = useRef(null);
   const overlayCanvasRef = useRef(null); // Canvas pour les squelettes uniquement
   const [isReady, setIsReady] = useState(false);
@@ -67,10 +67,10 @@ export default function GestureCamera({ onGestureDetected, isActive = true }) {
           });
         }
 
-        // 3. Initialiser HandPose
+        // 3. Initialiser HandPose (uniquement main droite)
         const handPose = await window.ml5.handPose({
           flipped: true,
-          maxHands: 2,
+          maxHands: 1, // Une seule main (la droite)
           runtime: 'mediapipe'
         });
 
@@ -129,28 +129,33 @@ export default function GestureCamera({ onGestureDetected, isActive = true }) {
     // Stocker les résultats pour le dessin
     currentHandsRef.current = results || [];
     
+    // Notifier le parent qu'on a détecté des mains (ou pas)
+    if (onHandsDetected) {
+      onHandsDetected(results && results.length > 0);
+    }
+    
     if (!gestureRecognizerRef.current) return;
 
     const recognizer = gestureRecognizerRef.current;
 
-    // Mettre à jour les trajectoires
+    // Mettre à jour les trajectoires (main droite uniquement)
     if (results && results.length > 0) {
-      results.forEach(hand => {
-        const handedness = hand.handedness.toLowerCase();
-        const palmCenter = calculatePalmCenter(hand.keypoints);
+      // Filtrer pour ne garder que la main droite
+      const rightHand = results.find(hand => hand.handedness.toLowerCase() === 'right');
+      
+      if (rightHand) {
+        const palmCenter = calculatePalmCenter(rightHand.keypoints);
         
         if (palmCenter) {
-          recognizer.updateTrail(handedness, palmCenter);
+          recognizer.updateTrail('right', palmCenter);
 
-          // Tenter de reconnaître un geste (main droite uniquement pour l'instant)
-          if (handedness === 'right') {
-            const gesture = recognizer.recognizeGesture('right', hand);
-            if (gesture && onGestureDetected) {
-              onGestureDetected(gesture.gesture, gesture.confidence);
-            }
+          // Tenter de reconnaître un geste
+          const gesture = recognizer.recognizeGesture('right', rightHand);
+          if (gesture && onGestureDetected) {
+            onGestureDetected(gesture.gesture, gesture.confidence);
           }
         }
-      });
+      }
     }
   };
 
@@ -205,17 +210,18 @@ export default function GestureCamera({ onGestureDetected, isActive = true }) {
       const finalScaleY = scaleY * skeletonScale;
 
       // Dessiner les mains à partir des résultats stockés avec le bon scaling
+      // Ne dessiner que la main droite
       const hands = currentHandsRef.current;
       if (hands && hands.length > 0) {
-        hands.forEach(hand => {
-          drawHandSkeleton(ctx, hand, finalScaleX, finalScaleY);
-          drawPalmCenter(ctx, hand, finalScaleX, finalScaleY);
-        });
+        const rightHand = hands.find(hand => hand.handedness.toLowerCase() === 'right');
+        if (rightHand) {
+          drawHandSkeleton(ctx, rightHand, finalScaleX, finalScaleY);
+          drawPalmCenter(ctx, rightHand, finalScaleX, finalScaleY);
+        }
       }
 
-      // Dessiner les trajectoires
+      // Dessiner la trajectoire (main droite uniquement)
       if (gestureRecognizerRef.current) {
-        drawTrail(ctx, gestureRecognizerRef.current.getTrail('left'), 'cyan', finalScaleX, finalScaleY);
         drawTrail(ctx, gestureRecognizerRef.current.getTrail('right'), 'red', finalScaleX, finalScaleY);
       }
 

@@ -26,6 +26,11 @@ export default function LevelPage({ params }) {
   const [activeProjectiles, setActiveProjectiles] = useState([]);
   const projectileIdRef = useRef(0);
   
+  // État du chargement et détection des mains
+  const [isLoading, setIsLoading] = useState(true);
+  const [handsDetected, setHandsDetected] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  
   // État du joueur
   const [playerHealth, setPlayerHealth] = useState(10);
   const [isGameOver, setIsGameOver] = useState(false);
@@ -70,9 +75,35 @@ export default function LevelPage({ params }) {
     isPausedRef.current = isPaused;
   }, [isPaused]);
   
+  // Animation de la barre de progression du chargement
+  useEffect(() => {
+    if (!isLoading) return;
+    
+    const interval = setInterval(() => {
+      setLoadingProgress(prev => {
+        if (handsDetected && prev >= 100) {
+          // Attendre un peu avant de fermer l'écran de chargement
+          setTimeout(() => setIsLoading(false), 500);
+          return 100;
+        }
+        
+        // Progression automatique jusqu'à 70%, puis attendre la détection des mains
+        if (!handsDetected && prev < 70) {
+          return prev + 2;
+        } else if (handsDetected && prev < 100) {
+          return prev + 10; // Progression rapide une fois les mains détectées
+        }
+        
+        return prev;
+      });
+    }, 100);
+    
+    return () => clearInterval(interval);
+  }, [isLoading, handsDetected]);
+  
   // Gestion des ninjas - Spawn du premier ninja puis les suivants
   useEffect(() => {
-    if (isGameOver || isPaused) return;
+    if (isGameOver || isPaused || isLoading) return;
     
     // Spawn du premier ninja au démarrage (après 2 secondes)
     if (ninjas.length === 0 && currentNinjaIndex === 0) {
@@ -80,7 +111,7 @@ export default function LevelPage({ params }) {
         spawnNinja(0);
       }, 2000);
     }
-  }, [isGameOver, isPaused, ninjas.length, currentNinjaIndex]);
+  }, [isGameOver, isPaused, isLoading, ninjas.length, currentNinjaIndex]);
   
   // Fonction pour faire apparaître un ninja
   const spawnNinja = (index) => {
@@ -263,10 +294,12 @@ export default function LevelPage({ params }) {
 
   // Animation du background qui défile
   useEffect(() => {
+    if (isLoading) return; // Ne pas animer pendant le chargement
+    
     let animationId;
     
     const animate = () => {
-      if (isPausedRef.current) {
+      if (isPausedRef.current || isGameOver) {
         animationId = requestAnimationFrame(animate);
         return;
       }
@@ -286,28 +319,29 @@ export default function LevelPage({ params }) {
         cancelAnimationFrame(animationId);
       }
     };
-  }, []); // Pas de dépendances
+  }, [isLoading, isGameOver]); // Ajout de isLoading et isGameOver dans les dépendances
 
   // Animation du personnage (alternance des poses)
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused || isLoading) return;
 
     const interval = setInterval(() => {
       setCharacterFrame((prev) => (prev === 1 ? 2 : 1));
     }, 300); // Change de frame toutes les 300ms
 
     return () => clearInterval(interval);
-  }, [isPaused]);
+  }, [isPaused, isLoading]);
 
   // Gestion de la pause avec Échap et lancement de sort avec Espace
   useEffect(() => {
     const handleKeyPress = (e) => {
-      if (e.key === "Escape") {
+      // Ne pas permettre de pause pendant le chargement
+      if (e.key === "Escape" && !isLoading) {
         setIsPaused((prev) => !prev);
       }
       
-      // Lancer le sort avec Espace SEULEMENT si un sort est prêt
-      if (e.key === " " && readySpell && !isPaused) {
+      // Lancer le sort avec Espace SEULEMENT si un sort est prêt et pas en chargement
+      if (e.key === " " && readySpell && !isPaused && !isLoading) {
         e.preventDefault();
         launchSpell(readySpell);
       }
@@ -315,7 +349,7 @@ export default function LevelPage({ params }) {
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [readySpell, isPaused]);
+  }, [readySpell, isPaused, isLoading]);
 
   // Fonction pour lancer un sort
   const launchSpell = (spell) => {
@@ -355,6 +389,12 @@ export default function LevelPage({ params }) {
   const handleGestureDetected = (gesture, confidence) => {
     console.log('Geste détecté:', gesture, 'confiance:', confidence);
     setDetectedGesture(gesture);
+    
+    // Marquer que les mains sont détectées (pour l'écran de chargement)
+    if (!handsDetected) {
+      console.log('✋ Mains détectées ! Fin du chargement...');
+      setHandsDetected(true);
+    }
   };
 
   // Callback quand le HUD a préparé le sort
@@ -564,6 +604,60 @@ export default function LevelPage({ params }) {
           </div>
         )}
 
+        {/* Écran de chargement */}
+        {isLoading && (
+          <div className="absolute inset-0 backdrop-blur-lg z-50 flex items-center justify-center">
+            <div className="text-center max-w-md mx-4 bg-black/40 backdrop-blur-md rounded-2xl p-8 border-2 border-white/20">
+              {/* Logo ou titre */}
+              <h1 className="text-5xl font-bold text-white mb-8 animate-pulse">
+                ⚔️ NIVEAU {level}
+              </h1>
+              
+              {/* Message de chargement */}
+              <div className="mb-6">
+                {!handsDetected ? (
+                  <>
+                    <p className="text-2xl text-yellow-400 mb-4 animate-bounce">
+                      ✋ Placez votre main droite devant la caméra
+                    </p>
+                    <p className="text-gray-400 text-sm">
+                      Le jeu démarrera automatiquement une fois votre main détectée
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-2xl text-green-400 mb-4">
+                    ✅ Main détectée ! Démarrage...
+                  </p>
+                )}
+              </div>
+              
+              {/* Barre de progression */}
+              <div className="w-full bg-gray-800 rounded-full h-4 overflow-hidden border-2 border-gray-700">
+                <div
+                  className="h-full bg-linear-to-r from-purple-600 to-blue-500 transition-all duration-300 ease-out"
+                  style={{ width: `${loadingProgress}%` }}
+                >
+                  <div className="w-full h-full animate-pulse bg-white/20"></div>
+                </div>
+              </div>
+              
+              <p className="text-gray-500 text-xs mt-2">
+                {Math.floor(loadingProgress)}%
+              </p>
+              
+              {/* Instructions */}
+              <div className="mt-8 bg-gray-900/50 rounded-lg p-4 border border-gray-700">
+                <p className="text-white text-sm mb-2">📋 Instructions :</p>
+                <ul className="text-gray-400 text-xs space-y-1 text-left">
+                  <li>• Faites des gestes circulaires pour lancer des sorts</li>
+                  <li>• Appuyez sur <kbd className="px-1 bg-gray-700 rounded">Espace</kbd> pour confirmer le sort</li>
+                  <li>• Éliminez les 5 ninjas pour gagner</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* HUD du sort détecté */}
         <SpellHUD 
           detectedSpell={detectedGesture}
@@ -573,6 +667,11 @@ export default function LevelPage({ params }) {
         {/* Caméra et détection de gestes */}
         <GestureCamera 
           onGestureDetected={handleGestureDetected}
+          onHandsDetected={(detected) => {
+            if (detected && !handsDetected) {
+              setHandsDetected(true);
+            }
+          }}
           isActive={!isPaused}
         />
 
