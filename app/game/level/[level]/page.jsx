@@ -3,17 +3,29 @@
 import { useState, useEffect, useRef, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import SpellHUD from "../../components/SpellHUD";
+import GestureCamera from "../../components/GestureCamera";
+import SpellProjectile from "../../components/SpellProjectile";
 
 export default function LevelPage({ params }) {
   const { level } = use(params);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [characterFrame, setCharacterFrame] = useState(1);
+  const [characterPose, setCharacterPose] = useState('neutral'); // 'neutral' ou 'fireball'
   const [bgWidth, setBgWidth] = useState(1920);
   const animationRef = useRef(null);
+  const isPausedRef = useRef(false); // Ref pour isPaused
   
-  // Vitesse de défilement (pixels par frame)
-  const scrollSpeed = 3;
+  // État pour les sorts
+  const [detectedGesture, setDetectedGesture] = useState(null);
+  const [readySpell, setReadySpell] = useState(null);
+  const [activeProjectiles, setActiveProjectiles] = useState([]);
+  const projectileIdRef = useRef(0);
+  
+  // Utiliser useRef pour les valeurs qui ne nécessitent pas de re-render
+  const bgWidthRef = useRef(1920);
+  const scrollSpeedRef = useRef(3);
 
   // Calcul de la largeur du background basé sur la hauteur de l'écran
   useEffect(() => {
@@ -23,6 +35,7 @@ export default function LevelPage({ params }) {
       const bgRatio = 1920 / 1080;
       const calculatedWidth = Math.ceil(screenHeight * bgRatio);
       setBgWidth(calculatedWidth);
+      bgWidthRef.current = calculatedWidth;
     };
 
     calculateBgWidth();
@@ -30,27 +43,37 @@ export default function LevelPage({ params }) {
     return () => window.removeEventListener('resize', calculateBgWidth);
   }, []);
 
+  // Synchroniser isPausedRef avec isPaused
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
+
   // Animation du background qui défile
   useEffect(() => {
-    if (isPaused) return;
-
+    let animationId;
+    
     const animate = () => {
+      if (isPausedRef.current) {
+        animationId = requestAnimationFrame(animate);
+        return;
+      }
+      
       setScrollPosition((prev) => {
-        // Réinitialiser la position quand on a parcouru 2 backgrounds (pour la boucle infinie)
-        const newPos = prev + scrollSpeed;
-        return newPos >= bgWidth * 2 ? newPos - bgWidth * 2 : newPos;
+        const newPos = prev + scrollSpeedRef.current;
+        return newPos >= bgWidthRef.current * 2 ? newPos - bgWidthRef.current * 2 : newPos;
       });
-      animationRef.current = requestAnimationFrame(animate);
+      
+      animationId = requestAnimationFrame(animate);
     };
 
-    animationRef.current = requestAnimationFrame(animate);
+    animationId = requestAnimationFrame(animate);
 
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
+      if (animationId) {
+        cancelAnimationFrame(animationId);
       }
     };
-  }, [isPaused, scrollSpeed, bgWidth]);
+  }, []); // Pas de dépendances
 
   // Animation du personnage (alternance des poses)
   useEffect(() => {
@@ -63,24 +86,78 @@ export default function LevelPage({ params }) {
     return () => clearInterval(interval);
   }, [isPaused]);
 
-  // Gestion de la pause avec Échap
+  // Gestion de la pause avec Échap et lancement de sort avec Espace
   useEffect(() => {
     const handleKeyPress = (e) => {
       if (e.key === "Escape") {
         setIsPaused((prev) => !prev);
       }
+      
+      // Lancer le sort avec Espace SEULEMENT si un sort est prêt
+      if (e.key === " " && readySpell && !isPaused) {
+        e.preventDefault();
+        launchSpell(readySpell);
+      }
     };
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, []);
+  }, [readySpell, isPaused]);
+
+  // Fonction pour lancer un sort
+  const launchSpell = (spell) => {
+    // 1. Changer la pose du personnage
+    setCharacterPose('fireball');
+    
+    // 2. Créer le projectile
+    const characterElement = document.querySelector('.character-position');
+    if (characterElement) {
+      const rect = characterElement.getBoundingClientRect();
+      const startX = rect.left + rect.width;
+      const startY = rect.top + rect.height / 2;
+      
+      const newProjectile = {
+        id: projectileIdRef.current++,
+        spell: spell,
+        startX: startX,
+        startY: startY
+      };
+      
+      setActiveProjectiles(prev => [...prev, newProjectile]);
+    }
+    
+    // 3. Réinitialiser la détection
+    setDetectedGesture(null);
+    setReadySpell(null);
+    
+    // 4. Revenir à la pose neutre après 500ms
+    setTimeout(() => {
+      setCharacterPose('neutral');
+    }, 500);
+  };
+
+  // Callback quand un geste est détecté
+  const handleGestureDetected = (gesture, confidence) => {
+    console.log('Geste détecté:', gesture, 'confiance:', confidence);
+    setDetectedGesture(gesture);
+  };
+
+  // Callback quand le HUD a préparé le sort
+  const handleSpellReady = (spell) => {
+    setReadySpell(spell);
+  };
+
+  // Callback quand un projectile doit être détruit
+  const handleProjectileDestroy = (id) => {
+    setActiveProjectiles(prev => prev.filter(p => p.id !== id));
+  };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-black">
+    <div className="relative w-screen h-screen overflow-hidden bg-black" style={{ zIndex: 1 }}>
       {/* Container du jeu */}
-      <div className="relative w-full h-full">
+      <div className="relative w-full h-full" style={{ zIndex: 10 }}>
         {/* Backgrounds défilants - 4 images pour assurer la continuité */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0" style={{ zIndex: 1 }}>
           {[0, 1, 2, 3].map((index) => {
             // Calcule la position de chaque background (arrondie pour éviter les gaps)
             const position = Math.floor(index * bgWidth - scrollPosition);
@@ -109,19 +186,35 @@ export default function LevelPage({ params }) {
         </div>
 
         {/* Le personnage (fixe sur le sol à gauche de l'écran) */}
-        <div className="absolute left-[5%] bottom-[14%] z-10">
+        <div className="absolute left-[5%] bottom-[14%] z-10 character-position">
           <div className="relative w-32 h-32 md:w-48 md:h-48">
             <Image
-              src={`/MC/MC-pose-neutral-${characterFrame}.svg`}
+              src={
+                characterPose === 'fireball' 
+                  ? `/MC/MC-pose-fireball.svg`
+                  : `/MC/MC-pose-neutral-${characterFrame}.svg`
+              }
               alt="Main Character"
               fill
-              className="object-contain"
+              className="object-contain transition-all duration-200"
             />
           </div>
         </div>
 
+        {/* Projectiles de sorts */}
+        {activeProjectiles.map(projectile => (
+          <SpellProjectile
+            key={projectile.id}
+            id={projectile.id}
+            spell={projectile.spell}
+            startX={projectile.startX}
+            startY={projectile.startY}
+            onDestroy={handleProjectileDestroy}
+          />
+        ))}
+
         {/* Interface overlay */}
-        <div className="absolute top-0 left-0 right-0 p-4 z-20 bg-gradient-to-b from-black/60 to-transparent">
+        <div className="absolute top-0 left-0 right-0 p-4 z-20 bg-linear-to-b from-black/60 to-transparent">
           <div className="flex items-center justify-between">
             {/* Info du niveau */}
             <div className="text-white">
@@ -184,6 +277,18 @@ export default function LevelPage({ params }) {
             </div>
           </div>
         )}
+
+        {/* HUD du sort détecté */}
+        <SpellHUD 
+          detectedSpell={detectedGesture}
+          onSpellReady={handleSpellReady}
+        />
+
+        {/* Caméra et détection de gestes */}
+        <GestureCamera 
+          onGestureDetected={handleGestureDetected}
+          isActive={!isPaused}
+        />
 
         {/* Instructions en bas */}
         <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center">
