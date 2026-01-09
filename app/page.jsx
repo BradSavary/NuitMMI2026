@@ -39,6 +39,9 @@ export default function Home() {
             >
               Discover
             </a>
+            <Link href="https://github.com/BradSavary/NuitMMI2026" target="_blank" rel="noopener noreferrer" className="px-8 py-4 bg-black hover:bg-gray-800 text-white rounded-xl font-bold text-lg transition-all transform hover:scale-105">
+              Github
+            </Link>
           </div>
         </div>
       </section>
