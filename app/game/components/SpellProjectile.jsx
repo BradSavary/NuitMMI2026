@@ -53,11 +53,9 @@ export default function SpellProjectile({
       size: 150, // Encore plus grand pour l'effet dévastateur
       particleCount: 12, // Plus de particules
       particleSize: 60,
-      color: 'green',
       rotation: false, // Pas de rotation
       spellImage: '/spell/ground/spell.svg',
       particleImage: '/spell/ground/particule.svg',
-      shadowColor: 'rgba(34, 197, 94, 0.8)',
       yOffset: 50 // Décalage vers le bas pour raser le sol
     }
   };
