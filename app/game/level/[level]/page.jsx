@@ -13,12 +13,14 @@ import GhostProjectile from "../../components/GhostProjectile";
 import HealthBar from "../../components/HealthBar";
 import DragonBoss from "../../components/DragonBoss";
 import BossProjectile from "../../components/BossProjectile";
+import TutorialModal from "../../components/TutorialModal";
 import { useGameAudio } from "../../../../lib/hooks/useGameAudio";
 
 export default function LevelPage({ params }) {
   const { level } = use(params);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
   const [characterFrame, setCharacterFrame] = useState(1);
   const [characterPose, setCharacterPose] = useState('neutral'); // 'neutral' ou 'fireball'
   const [bgWidth, setBgWidth] = useState(1920);
@@ -980,7 +982,7 @@ export default function LevelPage({ params }) {
         </div>
 
         {/* Menu Pause (overlay complet) */}
-        {isPaused && !isGameOver && (
+        {isPaused && !isGameOver && !showTutorial && (
           <div className="absolute inset-0 z-30 flex items-center justify-center backdrop-blur-sm backdrop-brightness-75">
             <div className="bg-gray-900 p-8 max-w-md w-full mx-4 pixel-border pixel-corners backdrop-blur-sm backdrop-brightness-75" >
               <h2 className="text-4xl pixel-font font-bold text-white text-center mb-8 tracking-wider">
@@ -993,6 +995,13 @@ export default function LevelPage({ params }) {
                   className="w-full px-6 py-4 bg-purple-600 text-white pixel-button pixel-font cursor-pointer"
                 >
                   CONTINUE
+                </button>
+                
+                <button
+                  onClick={() => setShowTutorial(true)}
+                  className="w-full px-6 py-4 bg-blue-600 text-white pixel-button pixel-font cursor-pointer"
+                >
+                  TUTORIAL
                 </button>
                 
                 <button
@@ -1015,6 +1024,14 @@ export default function LevelPage({ params }) {
               </p>
             </div>
           </div>
+        )}
+        
+        {/* Modale de Tutoriel */}
+        {showTutorial && (
+          <TutorialModal
+            isOpen={showTutorial}
+            onClose={() => setShowTutorial(false)}
+          />
         )}
         
         {/* Écran Game Over */}
