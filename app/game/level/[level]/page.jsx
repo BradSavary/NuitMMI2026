@@ -67,6 +67,7 @@ export default function LevelPage({ params }) {
   const scrollSpeedRef = useRef(3);
   const maxScrollRef = useRef(bgWidth * 2); // Distance maximale de scroll
   const [totalBgCount, setTotalBgCount] = useState(2); // Par défaut : BG-1 et BG-2
+  const totalBgCountRef = useRef(2); // Ref pour totalBgCount
   
   // Configuration des dégâts
   const SPELL_DAMAGE = {
@@ -97,6 +98,11 @@ export default function LevelPage({ params }) {
   useEffect(() => {
     isPausedRef.current = isPaused;
   }, [isPaused]);
+  
+  // Synchroniser totalBgCountRef avec totalBgCount
+  useEffect(() => {
+    totalBgCountRef.current = totalBgCount;
+  }, [totalBgCount]);
   
   // Animation de la barre de progression du chargement
   useEffect(() => {
@@ -451,8 +457,8 @@ export default function LevelPage({ params }) {
       setScrollPosition((prev) => {
         const newPos = prev + scrollSpeedRef.current;
         
-        // Si on a ajouté le BG-boss (totalBgCount === 3)
-        if (totalBgCount === 3) {
+        // Si on a ajouté le BG-boss (totalBgCountRef.current === 3)
+        if (totalBgCountRef.current === 3) {
           // S'arrêter exactement au début du BG-boss (position bgWidth * 2)
           const stopPosition = bgWidthRef.current * 2;
           if (newPos >= stopPosition) {
@@ -479,7 +485,7 @@ export default function LevelPage({ params }) {
         cancelAnimationFrame(animationId);
       }
     };
-  }, [isLoading, isGameOver, totalBgCount]);
+  }, [isLoading, isGameOver]);
 
   // Animation du personnage (alternance des poses)
   useEffect(() => {
@@ -762,6 +768,7 @@ export default function LevelPage({ params }) {
             onDeath={handleNinjaDeath}
             onSpellCast={handleNinjaSpellCast}
             scrollSpeed={scrollSpeedRef.current}
+            isPaused={isPaused}
           />
         ))}
 
@@ -774,6 +781,7 @@ export default function LevelPage({ params }) {
             health={boss.health}
             onDeath={handleBossDeath}
             onSpellCast={handleBossSpellCast}
+            isPaused={isPaused}
           />
         )}
 
@@ -786,6 +794,7 @@ export default function LevelPage({ params }) {
             startX={projectile.startX}
             startY={projectile.startY}
             onDestroy={handleProjectileDestroy}
+            isPaused={isPaused}
           />
         ))}
         
@@ -798,6 +807,7 @@ export default function LevelPage({ params }) {
             startY={projectile.startY}
             damage={projectile.damage}
             onDestroy={handleEnemyProjectileDestroy}
+            isPaused={isPaused}
           />
         ))}
         
@@ -810,6 +820,7 @@ export default function LevelPage({ params }) {
             startY={projectile.startY}
             damage={projectile.damage}
             onDestroy={handleBossProjectileDestroy}
+            isPaused={isPaused}
           />
         ))}
         
@@ -825,57 +836,42 @@ export default function LevelPage({ params }) {
               <p className="text-sm opacity-75">Exploration en cours...</p>
             </div>
 
-            {/* Boutons */}
-            <div className="flex gap-3">
-              <button
-                onClick={() => setIsPaused(!isPaused)}
-                className="px-4 py-2 bg-slate-700/80 hover:bg-slate-600 text-white rounded-lg transition-colors backdrop-blur-sm"
-              >
-                {isPaused ? "▶️ Resume" : "⏸️ Pause"}
-              </button>
-              <Link
-                href="/game"
-                className="px-4 py-2 bg-red-700/80 hover:bg-red-600 text-white rounded-lg transition-colors backdrop-blur-sm"
-              >
-                ❌ Quit
-              </Link>
-            </div>
           </div>
         </div>
 
         {/* Menu Pause (overlay complet) */}
         {isPaused && !isGameOver && (
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-30 flex items-center justify-center">
-            <div className="bg-slate-800 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border-2 border-purple-500">
-              <h2 className="text-4xl font-bold text-white text-center mb-6">
-                ⏸️ PAUSE
+          <div className="absolute inset-0 z-30 flex items-center justify-center backdrop-blur-sm backdrop-brightness-75">
+            <div className="bg-gray-900 p-8 max-w-md w-full mx-4 pixel-border pixel-corners backdrop-blur-sm backdrop-brightness-75" >
+              <h2 className="text-4xl pixel-font font-bold text-white text-center mb-8 tracking-wider">
+                PAUSED
               </h2>
               
               <div className="space-y-4">
                 <button
                   onClick={() => setIsPaused(false)}
-                  className="w-full px-6 py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors text-lg"
+                  className="w-full px-6 py-4 bg-purple-600 text-white pixel-button pixel-font cursor-pointer"
                 >
-                  ▶️ Continue
+                  CONTINUE
                 </button>
                 
                 <button
                   onClick={() => window.location.reload()}
-                  className="w-full px-6 py-4 bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-xl transition-colors"
+                  className="w-full px-6 py-4 bg-gray-700 text-white pixel-button pixel-font cursor-pointer"
                 >
-                  🔄 Restart
+                  RESTART
                 </button>
                 
                 <Link
                   href="/game"
-                  className="block w-full px-6 py-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-colors text-center"
+                  className="block w-full px-6 py-4 bg-red-700 text-white text-center pixel-button pixel-font cursor-pointer"
                 >
-                  🏠 Main Menu
+                  MAIN MENU
                 </Link>
               </div>
 
-              <p className="text-gray-400 text-center mt-6 text-sm">
-                Press <kbd className="px-2 py-1 bg-slate-700 rounded">Esc</kbd> to resume
+              <p className="text-gray-400 text-center mt-8 text-xs pixel-font">
+                PRESS ESC TO RESUME
               </p>
             </div>
           </div>
@@ -883,34 +879,26 @@ export default function LevelPage({ params }) {
         
         {/* Écran Game Over */}
         {isGameOver && (
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-40 flex items-center justify-center">
-            <div className="bg-linear-to-br from-red-900 to-gray-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border-2 border-red-500">
-              <h2 className="text-5xl font-bold text-red-400 text-center mb-4 animate-pulse">
-                💀 GAME OVER
+          <div className="absolute inset-0 z-40 flex items-center justify-center backdrop-blur-sm backdrop-brightness-75">
+            <div className="bg-red-950 p-8 max-w-md w-full mx-4 pixel-border pixel-corners" >
+              <h2 className="text-5xl pixel-font font-bold text-red-500 text-center mb-6 tracking-wider">
+                GAME OVER
               </h2>
-              
-              <div className="bg-black/50 rounded-lg p-4 mb-6">
-                <p className="text-white text-center text-lg mb-2">
-                  Ninjas faced: <span className="font-bold text-yellow-400">{currentNinjaIndex} / {TOTAL_NINJAS}</span>
-                </p>
-                <p className="text-gray-400 text-center text-sm">
-                  You fought bravely!
-                </p>
-              </div>
+
               
               <div className="space-y-4">
                 <button
                   onClick={() => window.location.reload()}
-                  className="w-full px-6 py-4 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-xl transition-colors text-lg"
+                  className="w-full px-6 py-4 bg-yellow-600 text-white pixel-button pixel-font cursor-pointer"
                 >
-                  🔄 Try Again
+                  TRY AGAIN
                 </button>
                 
                 <Link
                   href="/game"
-                  className="block w-full px-6 py-4 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-xl transition-colors text-center"
+                  className="block w-full px-6 py-4 bg-gray-700 text-white text-center pixel-button pixel-font cursor-pointer"
                 >
-                  🏠 Main Menu
+                  MAIN MENU
                 </Link>
               </div>
             </div>
@@ -919,40 +907,34 @@ export default function LevelPage({ params }) {
         
         {/* Écran de Victoire */}
         {showVictory && (
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-40 flex items-center justify-center">
-            <div className="bg-linear-to-br from-yellow-900 via-amber-700 to-yellow-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border-2 border-yellow-500">
-              <h2 className="text-5xl font-bold text-yellow-300 text-center mb-4 animate-bounce">
-                🏆 VICTORY!
+          <div className="absolute inset-0 z-40 flex items-center justify-center backdrop-blur-sm backdrop-brightness-75">
+            <div className="bg-yellow-900 p-8 max-w-md w-full mx-4 pixel-border pixel-corners">
+              <h2 className="text-5xl pixel-font font-bold text-yellow-300 text-center mb-6 tracking-wider">
+                VICTORY
               </h2>
               
-              <div className="bg-black/50 rounded-lg p-6 mb-6">
-                <p className="text-white text-center text-2xl mb-4">
-                  🐉 You defeated the Dragon Boss!
+              <div className="p-6 mb-6 pixel-border-sm" >
+                <p className="text-white text-center text-xl pixel-font mb-4">
+                  DRAGON DEFEATED
                 </p>
-                <p className="text-yellow-400 text-center text-lg mb-2">
-                  Ninjas defeated: <span className="font-bold">{TOTAL_NINJAS} / {TOTAL_NINJAS}</span>
-                </p>
-                <p className="text-yellow-400 text-center text-lg mb-4">
-                  Boss defeated: <span className="font-bold">✅</span>
-                </p>
-                <p className="text-gray-300 text-center text-sm">
-                  You have proven your worth as a warrior wizard!
+                <p className="text-gray-300 text-center text-sm pixel-font">
+                  WARRIOR WIZARD STATUS ACHIEVED
                 </p>
               </div>
               
               <div className="space-y-4">
                 <button
                   onClick={() => window.location.reload()}
-                  className="w-full px-6 py-4 bg-yellow-500 hover:bg-yellow-600 text-black font-bold rounded-xl transition-colors text-lg"
+                  className="w-full px-6 py-4 bg-yellow-500 text-black pixel-button pixel-font cursor-pointer"
                 >
-                  🔄 Play Again
+                  PLAY AGAIN
                 </button>
                 
                 <Link
                   href="/game"
-                  className="block w-full px-6 py-4 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-xl transition-colors text-center"
+                  className="block w-full px-6 py-4 bg-gray-700 text-white text-center pixel-button pixel-font"
                 >
-                  🏠 Main Menu
+                  MAIN MENU
                 </Link>
               </div>
             </div>
@@ -961,54 +943,45 @@ export default function LevelPage({ params }) {
 
         {/* Écran de chargement */}
         {isLoading && (
-          <div className="absolute inset-0 backdrop-blur-lg z-50 flex items-center justify-center">
-            <div className="text-center max-w-md mx-4 bg-black/40 backdrop-blur-md rounded-2xl p-8 border-2 border-white/20">
+          <div className="absolute inset-0 z-50 flex items-center justify-center" style={{ backdropFilter: 'blur(12px) brightness(0.4)' }}>
+            <div className="text-center max-w-md mx-4 bg-gray-900 p-8 pixel-border pixel-corners" style={{ color: '#fff' }}>
               {/* Logo ou titre */}
-              <h1 className="text-5xl font-bold text-white mb-8 animate-pulse">
-                ⚔️ LEVEL {level}
+              <h1 className="text-4xl pixel-font font-bold text-white mb-8 tracking-wider">
+                LEVEL {level}
               </h1>
               
               {/* Message de chargement */}
               <div className="mb-6">
                 {!handsDetected ? (
                   <>
-                    <p className="text-2xl text-yellow-400 mb-4 animate-bounce">
-                      ✋ Place your right hand in front of the camera
+                    <p className="text-xl pixel-font text-yellow-400 mb-4">
+                      PLACE YOUR RIGHT HAND
                     </p>
-                    <p className="text-gray-400 text-sm">
-                      The game will start automatically once your hand is detected
+                    <p className="text-sm pixel-font text-gray-400">
+                      IN FRONT OF CAMERA
                     </p>
                   </>
                 ) : (
-                  <p className="text-2xl text-green-400 mb-4">
-                    ✅ Hand detected! Starting...
+                  <p className="text-xl pixel-font text-green-400 mb-4">
+                    HAND DETECTED
                   </p>
                 )}
               </div>
               
               {/* Barre de progression */}
-              <div className="w-full bg-gray-800 rounded-full h-4 overflow-hidden border-2 border-gray-700">
+              <div className="w-full bg-gray-800 h-6 pixel-border-sm mb-2" style={{ color: '#4b5563' }}>
                 <div
-                  className="h-full bg-linear-to-r from-purple-600 to-blue-500 transition-all duration-300 ease-out"
+                  className="h-full bg-purple-600 transition-all duration-300 ease-out relative"
                   style={{ width: `${loadingProgress}%` }}
                 >
-                  <div className="w-full h-full animate-pulse bg-white/20"></div>
+                  <div className="absolute inset-0 animate-pulse bg-white/20"></div>
                 </div>
               </div>
               
-              <p className="text-gray-500 text-xs mt-2">
+              <p className="text-gray-400 text-sm pixel-font mb-8">
                 {Math.floor(loadingProgress)}%
               </p>
               
-              {/* Instructions */}
-              <div className="mt-8 bg-gray-900/50 rounded-lg p-4 border border-gray-700">
-                <p className="text-white text-sm mb-2">📋 Instructions:</p>
-                <ul className="text-gray-400 text-xs space-y-1 text-left">
-                  <li>• Make circular gestures to cast spells</li>
-                  <li>• Press <kbd className="px-1 bg-gray-700 rounded">Space</kbd> to confirm the spell</li>
-                  <li>• Defeat all 5 ninjas to win</li>
-                </ul>
-              </div>
             </div>
           </div>
         )}
@@ -1033,10 +1006,8 @@ export default function LevelPage({ params }) {
 
         {/* Instructions en bas */}
         <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center">
-          <div className="bg-black/60 backdrop-blur-sm px-6 py-3 rounded-full text-white text-sm">
-            <span className="opacity-75">Press</span>{" "}
-            <kbd className="px-2 py-1 bg-slate-700 rounded mx-1">Esc</kbd>{" "}
-            <span className="opacity-75">to pause</span>
+          <div className="backdrop-blur-sm backdrop-brightness-75 px-6 py-3 text-white text-xs pixel-font pixel-border-sm" style={{ color: '#374151' }}>
+            PRESS ESC TO PAUSE
           </div>
         </div>
       </div>

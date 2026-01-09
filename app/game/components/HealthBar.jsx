@@ -16,29 +16,30 @@ export default function HealthBar({ currentHealth, maxHealth = 10 }) {
 
   return (
     <div className="absolute top-4 left-4 z-30">
-      <div className="bg-black/70 backdrop-blur-sm rounded-lg p-3 border-2 border-white/20">
+      <div className="bg-gray-900 backdrop-blur-sm p-3 pixel-border-sm">
         {/* Label */}
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-white font-bold text-sm">❤️ VIE</span>
-          <span className="text-white font-mono text-sm">
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-white pixel-font text-xs tracking-wider">HEALTH</span>
+          <span className="text-white pixel-font text-xs">
             {Math.max(0, currentHealth)} / {maxHealth}
           </span>
         </div>
         
-        {/* Barre de vie */}
-        <div className="w-48 h-6 bg-gray-700 rounded-full overflow-hidden border-2 border-gray-600">
+        {/* Barre de vie avec style pixel */}
+        <div className="w-48 h-4 bg-gray-800 overflow-hidden pixel-border-sm relative">
           <div
-            className={`h-full transition-all duration-300 ease-out ${getHealthColor()}`}
+            className={`h-full transition-all duration-300 ease-out ${getHealthColor()} relative`}
             style={{ width: `${healthPercentage}%` }}
           >
-            <div className="w-full h-full animate-pulse bg-white/20"></div>
+            {/* Effet de brillance pixelisé */}
+            <div className="absolute top-0 left-0 w-full h-1 bg-white/40"></div>
           </div>
         </div>
 
         {/* Indicateur de danger */}
         {healthPercentage <= 30 && healthPercentage > 0 && (
-          <div className="mt-2 text-red-400 text-xs font-bold animate-pulse text-center">
-            ⚠️ VIE CRITIQUE !
+          <div className="mt-2 text-red-400 text-xs pixel-font animate-pulse text-center tracking-wide">
+            CRITICAL
           </div>
         )}
       </div>

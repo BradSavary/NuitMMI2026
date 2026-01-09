@@ -9,12 +9,14 @@ import Image from "next/image";
  * - Utilise l'image spell.png du dragon
  * - Inflige 2 PV de dégâts
  */
-export default function BossProjectile({ id, startX, startY, damage, onDestroy }) {
+export default function BossProjectile({ id, startX, startY, damage, onDestroy, isPaused = false }) {
   const [position, setPosition] = useState({ x: startX, y: startY });
   const moveSpeed = 7; // Vitesse du projectile
 
   // Animation du mouvement
   useEffect(() => {
+    if (isPaused) return;
+    
     let frameId;
 
     const animate = () => {
@@ -42,7 +44,7 @@ export default function BossProjectile({ id, startX, startY, damage, onDestroy }
     return () => {
       if (frameId) cancelAnimationFrame(frameId);
     };
-  }, [id, onDestroy]);
+  }, [id, onDestroy, isPaused]);
 
   return (
     <div

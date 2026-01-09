@@ -13,11 +13,14 @@ export default function EnemyProjectile({
   onDestroy, 
   id,
   damage = 0.5,
-  speed = 8
+  speed = 8,
+  isPaused = false
 }) {
   const [position, setPosition] = useState({ x: startX, y: startY });
 
   useEffect(() => {
+    if (isPaused) return;
+    
     let frameId;
 
     const animate = () => {
@@ -43,7 +46,7 @@ export default function EnemyProjectile({
     return () => {
       if (frameId) cancelAnimationFrame(frameId);
     };
-  }, [id, onDestroy, speed]);
+  }, [id, onDestroy, speed, isPaused]);
 
   return (
     <div
