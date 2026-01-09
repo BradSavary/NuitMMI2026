@@ -831,13 +831,13 @@ export default function LevelPage({ params }) {
                 onClick={() => setIsPaused(!isPaused)}
                 className="px-4 py-2 bg-slate-700/80 hover:bg-slate-600 text-white rounded-lg transition-colors backdrop-blur-sm"
               >
-                {isPaused ? "▶️ Reprendre" : "⏸️ Pause"}
+                {isPaused ? "▶️ Resume" : "⏸️ Pause"}
               </button>
               <Link
                 href="/game"
                 className="px-4 py-2 bg-red-700/80 hover:bg-red-600 text-white rounded-lg transition-colors backdrop-blur-sm"
               >
-                ❌ Quitter
+                ❌ Quit
               </Link>
             </div>
           </div>
@@ -856,26 +856,26 @@ export default function LevelPage({ params }) {
                   onClick={() => setIsPaused(false)}
                   className="w-full px-6 py-4 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors text-lg"
                 >
-                  ▶️ Continuer
+                  ▶️ Continue
                 </button>
                 
                 <button
                   onClick={() => window.location.reload()}
                   className="w-full px-6 py-4 bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-xl transition-colors"
                 >
-                  🔄 Recommencer
+                  🔄 Restart
                 </button>
                 
                 <Link
                   href="/game"
                   className="block w-full px-6 py-4 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-colors text-center"
                 >
-                  🏠 Menu Principal
+                  🏠 Main Menu
                 </Link>
               </div>
 
               <p className="text-gray-400 text-center mt-6 text-sm">
-                Appuyez sur <kbd className="px-2 py-1 bg-slate-700 rounded">Échap</kbd> pour reprendre
+                Press <kbd className="px-2 py-1 bg-slate-700 rounded">Esc</kbd> to resume
               </p>
             </div>
           </div>
@@ -891,10 +891,10 @@ export default function LevelPage({ params }) {
               
               <div className="bg-black/50 rounded-lg p-4 mb-6">
                 <p className="text-white text-center text-lg mb-2">
-                  Ninjas affrontés: <span className="font-bold text-yellow-400">{currentNinjaIndex} / {TOTAL_NINJAS}</span>
+                  Ninjas faced: <span className="font-bold text-yellow-400">{currentNinjaIndex} / {TOTAL_NINJAS}</span>
                 </p>
                 <p className="text-gray-400 text-center text-sm">
-                  Vous avez combattu vaillamment !
+                  You fought bravely!
                 </p>
               </div>
               
@@ -903,14 +903,14 @@ export default function LevelPage({ params }) {
                   onClick={() => window.location.reload()}
                   className="w-full px-6 py-4 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-xl transition-colors text-lg"
                 >
-                  🔄 Réessayer
+                  🔄 Try Again
                 </button>
                 
                 <Link
                   href="/game"
                   className="block w-full px-6 py-4 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-xl transition-colors text-center"
                 >
-                  🏠 Menu Principal
+                  🏠 Main Menu
                 </Link>
               </div>
             </div>
@@ -922,21 +922,21 @@ export default function LevelPage({ params }) {
           <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-40 flex items-center justify-center">
             <div className="bg-linear-to-br from-yellow-900 via-amber-700 to-yellow-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border-2 border-yellow-500">
               <h2 className="text-5xl font-bold text-yellow-300 text-center mb-4 animate-bounce">
-                🏆 VICTOIRE !
+                🏆 VICTORY!
               </h2>
               
               <div className="bg-black/50 rounded-lg p-6 mb-6">
                 <p className="text-white text-center text-2xl mb-4">
-                  🐉 Vous avez vaincu le Dragon Boss !
+                  🐉 You defeated the Dragon Boss!
                 </p>
                 <p className="text-yellow-400 text-center text-lg mb-2">
-                  Ninjas vaincus: <span className="font-bold">{TOTAL_NINJAS} / {TOTAL_NINJAS}</span>
+                  Ninjas defeated: <span className="font-bold">{TOTAL_NINJAS} / {TOTAL_NINJAS}</span>
                 </p>
                 <p className="text-yellow-400 text-center text-lg mb-4">
-                  Boss vaincu: <span className="font-bold">✅</span>
+                  Boss defeated: <span className="font-bold">✅</span>
                 </p>
                 <p className="text-gray-300 text-center text-sm">
-                  Vous avez prouvé votre valeur de magicien guerrier !
+                  You have proven your worth as a warrior wizard!
                 </p>
               </div>
               
@@ -945,14 +945,14 @@ export default function LevelPage({ params }) {
                   onClick={() => window.location.reload()}
                   className="w-full px-6 py-4 bg-yellow-500 hover:bg-yellow-600 text-black font-bold rounded-xl transition-colors text-lg"
                 >
-                  🔄 Rejouer
+                  🔄 Play Again
                 </button>
                 
                 <Link
                   href="/game"
                   className="block w-full px-6 py-4 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-xl transition-colors text-center"
                 >
-                  🏠 Menu Principal
+                  🏠 Main Menu
                 </Link>
               </div>
             </div>
@@ -965,7 +965,7 @@ export default function LevelPage({ params }) {
             <div className="text-center max-w-md mx-4 bg-black/40 backdrop-blur-md rounded-2xl p-8 border-2 border-white/20">
               {/* Logo ou titre */}
               <h1 className="text-5xl font-bold text-white mb-8 animate-pulse">
-                ⚔️ NIVEAU {level}
+                ⚔️ LEVEL {level}
               </h1>
               
               {/* Message de chargement */}
@@ -973,15 +973,15 @@ export default function LevelPage({ params }) {
                 {!handsDetected ? (
                   <>
                     <p className="text-2xl text-yellow-400 mb-4 animate-bounce">
-                      ✋ Placez votre main droite devant la caméra
+                      ✋ Place your right hand in front of the camera
                     </p>
                     <p className="text-gray-400 text-sm">
-                      Le jeu démarrera automatiquement une fois votre main détectée
+                      The game will start automatically once your hand is detected
                     </p>
                   </>
                 ) : (
                   <p className="text-2xl text-green-400 mb-4">
-                    ✅ Main détectée ! Démarrage...
+                    ✅ Hand detected! Starting...
                   </p>
                 )}
               </div>
@@ -1002,11 +1002,11 @@ export default function LevelPage({ params }) {
               
               {/* Instructions */}
               <div className="mt-8 bg-gray-900/50 rounded-lg p-4 border border-gray-700">
-                <p className="text-white text-sm mb-2">📋 Instructions :</p>
+                <p className="text-white text-sm mb-2">📋 Instructions:</p>
                 <ul className="text-gray-400 text-xs space-y-1 text-left">
-                  <li>• Faites des gestes circulaires pour lancer des sorts</li>
-                  <li>• Appuyez sur <kbd className="px-1 bg-gray-700 rounded">Espace</kbd> pour confirmer le sort</li>
-                  <li>• Éliminez les 5 ninjas pour gagner</li>
+                  <li>• Make circular gestures to cast spells</li>
+                  <li>• Press <kbd className="px-1 bg-gray-700 rounded">Space</kbd> to confirm the spell</li>
+                  <li>• Defeat all 5 ninjas to win</li>
                 </ul>
               </div>
             </div>
@@ -1034,9 +1034,9 @@ export default function LevelPage({ params }) {
         {/* Instructions en bas */}
         <div className="absolute bottom-4 left-0 right-0 z-20 flex justify-center">
           <div className="bg-black/60 backdrop-blur-sm px-6 py-3 rounded-full text-white text-sm">
-            <span className="opacity-75">Appuyez sur</span>{" "}
-            <kbd className="px-2 py-1 bg-slate-700 rounded mx-1">Échap</kbd>{" "}
-            <span className="opacity-75">pour mettre en pause</span>
+            <span className="opacity-75">Press</span>{" "}
+            <kbd className="px-2 py-1 bg-slate-700 rounded mx-1">Esc</kbd>{" "}
+            <span className="opacity-75">to pause</span>
           </div>
         </div>
       </div>

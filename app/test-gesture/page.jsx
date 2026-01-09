@@ -6,7 +6,7 @@ import Link from 'next/link.js';
 
 export default function TestGesturePage() {
   const containerRef = useRef(null);
-  const [status, setStatus] = useState('Chargement des bibliothèques...');
+  const [status, setStatus] = useState('Loading libraries...');
   const [gestureInfo, setGestureInfo] = useState(null);
   const [score, setScore] = useState(0);
   const [scriptsLoaded, setScriptsLoaded] = useState({ p5: false, ml5: false });
@@ -24,7 +24,7 @@ export default function TestGesturePage() {
 
     const initSketch = async () => {
       try {
-        setStatus('Initialisation...');
+        setStatus('Initialization...');
         
         // Charger le système de gestes depuis le chemin absolu
         const { HandPoseManager, GestureRecognizer, GestureDebugger } = 
@@ -37,7 +37,7 @@ export default function TestGesturePage() {
           p.setup = async () => {
             p.createCanvas(640, 480);
             
-            setStatus('Chargement du modèle HandPose...');
+            setStatus('Loading HandPose model...');
             
             // Initialiser HandPoseManager
             handPoseManager = new HandPoseManager();
@@ -49,22 +49,22 @@ export default function TestGesturePage() {
             });
 
             if (!modelLoaded) {
-              setStatus('❌ Erreur lors du chargement du modèle');
+              setStatus('❌ Error loading model');
               return;
             }
 
-            setStatus('Initialisation de la caméra...');
+            setStatus('Initializing camera...');
 
             const cameraReady = await handPoseManager.initCamera();
             
             if (!cameraReady) {
-              setStatus('❌ Erreur d\'accès à la caméra');
+              setStatus('❌ Camera access error');
               return;
             }
 
             videoElement = handPoseManager.video;
             
-            setStatus('Attente du modèle...');
+            setStatus('Waiting for model...');
             
             // Attendre 2 secondes pour que le modèle soit complètement prêt
             await new Promise(resolve => setTimeout(resolve, 2000));
@@ -80,7 +80,7 @@ export default function TestGesturePage() {
                 spiral: 0.65,
                 triangle: 0.6,
                 square: 0.65,
-                fistRaised: 0.75  // Nouveau geste : poing levé
+                fistRaised: 0.75  // New gesture: fist raised
               }
             });
 
@@ -97,7 +97,7 @@ export default function TestGesturePage() {
             // Démarrer la détection
             handPoseManager.startDetection();
             
-            setStatus('✅ Prêt ! Montrez vos mains 👋');
+            setStatus('✅ Ready! Show your hands 👋');
           };
 
           p.draw = () => {
@@ -171,7 +171,7 @@ export default function TestGesturePage() {
         
       } catch (error) {
         console.error('Erreur d\'initialisation:', error);
-        setStatus('❌ Erreur : ' + error.message);
+        setStatus('❌ Error: ' + error.message);
       }
     };
 
@@ -191,7 +191,7 @@ export default function TestGesturePage() {
   return (
     <>
     <Link href={"/game"} className=" rounded-md bg-gray-800 px-3 py-1 text-white hover:bg-gray-700 transition">
-     Retour
+     Back
     </Link>
       {/* Charger p5.js */}
       <Script
@@ -201,7 +201,7 @@ export default function TestGesturePage() {
           console.log('✅ p5.js chargé');
           setScriptsLoaded(prev => ({ ...prev, p5: true }));
         }}
-        onError={() => setStatus('❌ Erreur chargement p5.js')}
+        onError={() => setStatus('❌ Error loading p5.js')}
       />
       
       {/* Charger ml5.js */}
@@ -212,16 +212,16 @@ export default function TestGesturePage() {
           console.log('✅ ml5.js chargé');
           setScriptsLoaded(prev => ({ ...prev, ml5: true }));
         }}
-        onError={() => setStatus('❌ Erreur chargement ml5.js')}
+        onError={() => setStatus('❌ Error loading ml5.js')}
       />
 
       <div className="min-h-screen bg-gray-900 text-white p-8">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="mb-6">
-            <h1 className="text-4xl font-bold mb-2">✋ Test de Reconnaissance de Gestes</h1>
+            <h1 className="text-4xl font-bold mb-2">✋ Gesture Recognition Test</h1>
             <p className="text-gray-400">
-              Module /lib/gesture - Détection avec HandPose (ml5.js)
+              Module /lib/gesture - Detection with HandPose (ml5.js)
             </p>
           </div>
 
@@ -239,10 +239,10 @@ export default function TestGesturePage() {
             
             {gestureInfo && (
               <div className="bg-purple-900/50 border border-purple-700 rounded-lg p-4">
-                <h3 className="text-lg font-bold mb-2">Dernier Geste</h3>
+                <h3 className="text-lg font-bold mb-2">Last Gesture</h3>
                 <p className="text-xl">{gestureInfo.gesture}</p>
                 <p className="text-sm text-gray-400">
-                  Main {gestureInfo.hand === 'left' ? 'Gauche' : 'Droite'} - 
+                  Hand {gestureInfo.hand === 'left' ? 'Left' : 'Right'} - 
                   {Math.floor(gestureInfo.confidence * 100)}%
                 </p>
               </div>

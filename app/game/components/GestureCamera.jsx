@@ -319,7 +319,7 @@ export default function GestureCamera({ onGestureDetected, onHandsDetected, isAc
   if (error) {
     return (
       <div className="absolute top-4 right-4 z-40 bg-red-900/90 backdrop-blur-sm p-4 rounded-lg border-2 border-red-500">
-        <p className="text-white font-semibold">❌ Erreur caméra</p>
+        <p className="text-white font-semibold">❌ Camera Error</p>
         <p className="text-red-200 text-sm">{error}</p>
       </div>
     );
