@@ -19,6 +19,50 @@
   }
 }
 
+/* Pixel Art & Retro Effects */
+@keyframes pixelShift {
+  0%, 100% { text-shadow: 2px 2px 0px rgba(0,0,0,0.3); }
+  50% { text-shadow: 3px 3px 0px rgba(155, 89, 182, 0.4); }
+}
+
+@keyframes glow {
+  0%, 100% { 
+    box-shadow: 0 0 10px rgba(245, 169, 98, 0.5), inset 0 0 10px rgba(0,0,0,0.1);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(245, 169, 98, 0.8), inset 0 0 20px rgba(0,0,0,0.2);
+  }
+}
+
+@keyframes floatPixel {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  25% { transform: translateY(-5px) rotate(2deg); }
+  75% { transform: translateY(-2px) rotate(-2deg); }
+}
+
+@keyframes pixelBorder {
+  0%, 100% { border-color: rgba(245, 169, 98, 0.6); }
+  50% { border-color: rgba(231, 90, 124, 0.8); }
+}
+
+* {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+button, a {
+  transition: all 0.15s ease-out;
+}
+
+button:hover, a:hover {
+  transform: translate(-2px, -2px);
+}
+
+button:active, a:active {
+  transform: translate(0px, 0px);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
