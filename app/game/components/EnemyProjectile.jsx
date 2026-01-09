@@ -12,7 +12,7 @@ export default function EnemyProjectile({
   startY, 
   onDestroy, 
   id,
-  damage = 1,
+  damage = 0.5,
   speed = 8
 }) {
   const [position, setPosition] = useState({ x: startX, y: startY });

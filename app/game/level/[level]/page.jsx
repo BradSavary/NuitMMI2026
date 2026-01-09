@@ -9,6 +9,8 @@ import SpellProjectile from "../../components/SpellProjectile";
 import NinjaEnemy from "../../components/NinjaEnemy";
 import EnemyProjectile from "../../components/EnemyProjectile";
 import HealthBar from "../../components/HealthBar";
+import DragonBoss from "../../components/DragonBoss";
+import BossProjectile from "../../components/BossProjectile";
 
 export default function LevelPage({ params }) {
   const { level } = use(params);
@@ -48,9 +50,18 @@ export default function LevelPage({ params }) {
   const [currentNinjaIndex, setCurrentNinjaIndex] = useState(0);
   const TOTAL_NINJAS = 5;
   
+  // État du boss
+  const [bossActive, setBossActive] = useState(false);
+  const [boss, setBoss] = useState(null);
+  const [bossProjectiles, setBossProjectiles] = useState([]);
+  const bossProjectileIdRef = useRef(0);
+  const [showVictory, setShowVictory] = useState(false);
+  
   // Utiliser useRef pour les valeurs qui ne nécessitent pas de re-render
   const bgWidthRef = useRef(1920);
   const scrollSpeedRef = useRef(3);
+  const maxScrollRef = useRef(bgWidth * 2); // Distance maximale de scroll
+  const [totalBgCount, setTotalBgCount] = useState(2); // Par défaut : BG-1 et BG-2
   
   // Configuration des dégâts
   const SPELL_DAMAGE = {
@@ -68,12 +79,14 @@ export default function LevelPage({ params }) {
       const calculatedWidth = Math.ceil(screenHeight * bgRatio);
       setBgWidth(calculatedWidth);
       bgWidthRef.current = calculatedWidth;
+      // Mettre à jour le scroll max (par défaut 2 BG, puis 3 avec le boss)
+      maxScrollRef.current = calculatedWidth * (bossActive ? 3 : 2);
     };
 
     calculateBgWidth();
     window.addEventListener('resize', calculateBgWidth);
     return () => window.removeEventListener('resize', calculateBgWidth);
-  }, []);
+  }, [bossActive]);
 
   // Synchroniser isPausedRef avec isPaused
   useEffect(() => {
@@ -150,9 +163,9 @@ export default function LevelPage({ params }) {
         spawnNinja(nextIndex);
       }, 2000); // 2 secondes avant le prochain ninja
     } else {
-      // Tous les ninjas ont été traités - Victoire !
-      console.log('🎉 Tous les ninjas ont été vaincus !');
-      // Note: On ne fait pas de game over ici car c'est une victoire
+      // Tous les ninjas ont été vaincus - Faire apparaître le boss !
+      console.log('🎉 Tous les ninjas ont été vaincus ! Le boss arrive...');
+      spawnBoss();
     }
   };
   
@@ -176,8 +189,9 @@ export default function LevelPage({ params }) {
         spawnNinja(nextIndex);
       }, 2000);
     } else {
-      // Tous les ninjas ont été traités
-      console.log('🎉 Tous les ninjas sont passés !');
+      // Tous les ninjas sont passés - Faire apparaître le boss
+      console.log('🎉 Tous les ninjas sont passés ! Le boss arrive...');
+      spawnBoss();
     }
   };
   
@@ -187,6 +201,62 @@ export default function LevelPage({ params }) {
     setEnemyProjectiles(prev => [...prev, {
       ...spellData,
       id: `enemy-spell-${enemyProjectileIdRef.current++}`
+    }]);
+  };
+  
+  // Fonction pour faire apparaître le boss
+  const spawnBoss = () => {
+    if (bossActive) return; // Éviter de spawner plusieurs fois
+    
+    console.log('🐉 Tous les ninjas vaincus ! Ajout du BG-boss à la suite...');
+    
+    // Ajouter le BG-boss à la séquence
+    setTotalBgCount(3); // BG-1, BG-2, BG-boss
+    // Le boss apparaîtra automatiquement via l'effet ci-dessous
+  };
+  
+  // Effet pour faire apparaître le boss quand le BG-boss est atteint
+  useEffect(() => {
+    if (totalBgCount === 3 && !bossActive && !boss) {
+      const bossBgPosition = bgWidthRef.current * 2;
+      
+      // Si on est proche ou au BG-boss
+      if (scrollPosition >= bossBgPosition - 200) {
+        console.log('🐉 BG-boss atteint ! Le Dragon Boss apparaît !');
+        
+        setBossActive(true);
+        
+        // Restaurer les PV du joueur à 10
+        setPlayerHealth(10);
+        console.log('❤️ PV du joueur restaurés à 10');
+        
+        // Créer le boss sur le BG-boss
+        const newBoss = {
+          id: 'dragon-boss',
+          startX: window.innerWidth * 0.75,
+          startY: window.innerHeight * 0.5,
+          health: 30
+        };
+        
+        setBoss(newBoss);
+      }
+    }
+  }, [totalBgCount, bossActive, boss, scrollPosition]);
+  
+  // Gestion de la mort du boss
+  const handleBossDeath = (bossId) => {
+    console.log('🎉 Le boss est vaincu ! VICTOIRE !');
+    setBoss(null);
+    setBossActive(false);
+    setShowVictory(true);
+  };
+  
+  // Gestion du sort lancé par le boss
+  const handleBossSpellCast = (spellData) => {
+    console.log('Boss lance une boule de feu:', spellData);
+    setBossProjectiles(prev => [...prev, {
+      ...spellData,
+      id: `boss-spell-${bossProjectileIdRef.current++}`
     }]);
   };
   
@@ -263,6 +333,36 @@ export default function LevelPage({ params }) {
             setActiveProjectiles(prev => prev.filter(p => p.id !== projectile.id));
           }
         });
+        
+        // Pour le boss
+        if (boss && bossActive) {
+          const bossEl = document.querySelector(`[data-enemy-id="${boss.id}"]`);
+          if (bossEl) {
+            const bossRect = bossEl.getBoundingClientRect();
+            
+            // Vérifier la collision avec le boss (marge plus grande car le boss est plus gros)
+            const bossMargin = 50;
+            if (
+              projectileRect.left < bossRect.right + bossMargin &&
+              projectileRect.right > bossRect.left - bossMargin &&
+              projectileRect.top < bossRect.bottom + bossMargin &&
+              projectileRect.bottom > bossRect.top - bossMargin
+            ) {
+              console.log(`💥 Collision: Sort ${projectile.spell?.element} touche le boss, santé avant: ${boss.health}`);
+              
+              // Infliger des dégâts au boss
+              const damage = SPELL_DAMAGE[projectile.spell?.element] || 1;
+              const newHealth = boss.health - damage;
+              
+              console.log(`   ➡️ Dégâts: ${damage}, nouvelle santé: ${newHealth}`);
+              
+              setBoss(prev => prev ? { ...prev, health: newHealth } : null);
+              
+              // Détruire le projectile
+              setActiveProjectiles(prev => prev.filter(p => p.id !== projectile.id));
+            }
+          }
+        }
       });
       
       // Pour chaque projectile ennemi
@@ -292,10 +392,38 @@ export default function LevelPage({ params }) {
           setEnemyProjectiles(prev => prev.filter(p => p.id !== enemyProj.id));
         }
       });
+      
+      // Pour chaque projectile du boss
+      bossProjectiles.forEach(bossProj => {
+        const projEl = document.querySelector(`[data-projectile-id="${bossProj.id}"][data-projectile-type="boss"]`);
+        if (!projEl) return;
+        
+        const projRect = projEl.getBoundingClientRect();
+        const playerEl = document.querySelector('.character-position');
+        if (!playerEl) return;
+        
+        const playerRect = playerEl.getBoundingClientRect();
+        
+        // Vérifier collision avec le joueur
+        if (
+          projRect.left < playerRect.right &&
+          projRect.right > playerRect.left &&
+          projRect.top < playerRect.bottom &&
+          projRect.bottom > playerRect.top
+        ) {
+          console.log('💥 Collision: Boule de feu du boss touche le joueur !');
+          
+          // Infliger 2 PV de dégâts
+          playerTakeDamage(bossProj.damage || 2);
+          
+          // Détruire le projectile
+          setBossProjectiles(prev => prev.filter(p => p.id !== bossProj.id));
+        }
+      });
     }, 50); // Vérifier toutes les 50ms
     
     return () => clearInterval(checkInterval);
-  }, [activeProjectiles, ninjas, enemyProjectiles, isPaused, isGameOver, isInvincible]);
+  }, [activeProjectiles, ninjas, enemyProjectiles, bossProjectiles, boss, bossActive, isPaused, isGameOver, isInvincible]);
 
   // Animation du background qui défile
   useEffect(() => {
@@ -311,7 +439,23 @@ export default function LevelPage({ params }) {
       
       setScrollPosition((prev) => {
         const newPos = prev + scrollSpeedRef.current;
-        return newPos >= bgWidthRef.current * 2 ? newPos - bgWidthRef.current * 2 : newPos;
+        
+        // Si on a ajouté le BG-boss (totalBgCount === 3)
+        if (totalBgCount === 3) {
+          // S'arrêter exactement au début du BG-boss (position bgWidth * 2)
+          const stopPosition = bgWidthRef.current * 2;
+          if (newPos >= stopPosition) {
+            return stopPosition; // Fixer au bord gauche du BG-boss
+          }
+          return newPos;
+        }
+        
+        // Sinon, boucle infinie entre BG-1 et BG-2
+        const loopLength = bgWidthRef.current * 2;
+        if (newPos >= loopLength) {
+          return newPos - loopLength; // Retour au début de la boucle
+        }
+        return newPos;
       });
       
       animationId = requestAnimationFrame(animate);
@@ -324,7 +468,7 @@ export default function LevelPage({ params }) {
         cancelAnimationFrame(animationId);
       }
     };
-  }, [isLoading, isGameOver]); // Ajout de isLoading et isGameOver dans les dépendances
+  }, [isLoading, isGameOver, totalBgCount]);
 
   // Animation du personnage (alternance des poses)
   useEffect(() => {
@@ -432,31 +576,41 @@ export default function LevelPage({ params }) {
   const handleEnemyProjectileDestroy = (id) => {
     setEnemyProjectiles(prev => prev.filter(p => p.id !== id));
   };
+  
+  // Callback quand un projectile du boss doit être détruit
+  const handleBossProjectileDestroy = (id) => {
+    setBossProjectiles(prev => prev.filter(p => p.id !== id));
+  };
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-black" style={{ zIndex: 1 }}>
       {/* Container du jeu */}
       <div className="relative w-full h-full" style={{ zIndex: 10 }}>
-        {/* Backgrounds défilants - 4 images pour assurer la continuité */}
+        {/* Backgrounds défilants - Dynamique : BG-1, BG-2 en boucle, puis BG-boss s'ajoute */}
         <div className="absolute inset-0" style={{ zIndex: 1 }}>
+          {/* BG-1 et BG-2 qui bouclent à l'infini */}
           {[0, 1, 2, 3].map((index) => {
-            // Calcule la position de chaque background (arrondie pour éviter les gaps)
             const position = Math.floor(index * bgWidth - scrollPosition);
+            const bgImage = index % 2 === 0 ? "/bg/BG-1.png" : "/bg/BG-2.png";
+            
+            // Ne pas afficher si on est dans la phase boss et que ces BG sont hors de vue
+            if (totalBgCount === 3 && position < -bgWidth) {
+              return null;
+            }
             
             return (
               <div
-                key={index}
+                key={`loop-${index}`}
                 className="absolute top-0 left-0"
                 style={{
                   transform: `translateX(${position}px)`,
                   height: "100vh",
-                  width: `${bgWidth + 1}px`, // +1px pour éviter les micro-gaps
+                  width: `${bgWidth + 1}px`,
                 }}
               >
-                {/* Alterne entre BG-1 et BG-2 */}
                 <Image
-                  src={index % 2 === 0 ? "/bg/BG-1.png" : "/bg/BG-2.png"}
-                  alt={`Background ${index % 2 + 1}`}
+                  src={bgImage}
+                  alt={`Background Loop ${index + 1}`}
                   fill
                   className="object-cover"
                   priority={index < 2}
@@ -464,6 +618,42 @@ export default function LevelPage({ params }) {
               </div>
             );
           })}
+          
+          {/* BG-boss qui apparaît seulement après la défaite des ninjas */}
+          {totalBgCount === 3 && (
+            <>
+              {/* Le BG-boss */}
+              <div
+                key="boss-bg"
+                className="absolute top-0 left-0"
+                style={{
+                  // Quand scrollPosition = bgWidth * 2, le BG-boss remplit tout l'écran
+                  transform: `translateX(${Math.floor((bgWidth * 2) - scrollPosition)}px)`,
+                  height: "100vh",
+                  width: `${bgWidth + 1}px`, // +1px pour éviter les micro-gaps comme les autres
+                }}
+              >
+                <Image
+                  src="/bg/BG-boss.png"
+                  alt="Boss Background"
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
+              
+              {/* Fond noir pour masquer tout ce qui est à droite du BG-boss */}
+              <div
+                key="black-bg"
+                className="absolute top-0 left-0 bg-black"
+                style={{
+                  transform: `translateX(${Math.floor((bgWidth * 3) - scrollPosition)}px)`,
+                  height: "100vh",
+                  width: "100vw",
+                }}
+              />
+            </>
+          )}
         </div>
 
         {/* Le personnage (fixe sur le sol à gauche de l'écran) */}
@@ -499,6 +689,18 @@ export default function LevelPage({ params }) {
           />
         ))}
 
+        {/* Dragon Boss */}
+        {boss && bossActive && (
+          <DragonBoss
+            id={boss.id}
+            startX={boss.startX}
+            startY={boss.startY}
+            health={boss.health}
+            onDeath={handleBossDeath}
+            onSpellCast={handleBossSpellCast}
+          />
+        )}
+
         {/* Projectiles de sorts du joueur */}
         {activeProjectiles.map(projectile => (
           <SpellProjectile
@@ -520,6 +722,18 @@ export default function LevelPage({ params }) {
             startY={projectile.startY}
             damage={projectile.damage}
             onDestroy={handleEnemyProjectileDestroy}
+          />
+        ))}
+        
+        {/* Projectiles du boss */}
+        {bossProjectiles.map(projectile => (
+          <BossProjectile
+            key={projectile.id}
+            id={projectile.id}
+            startX={projectile.startX}
+            startY={projectile.startY}
+            damage={projectile.damage}
+            onDestroy={handleBossProjectileDestroy}
           />
         ))}
         
@@ -593,7 +807,7 @@ export default function LevelPage({ params }) {
         
         {/* Écran Game Over */}
         {isGameOver && (
-          <div className="absolute inset-0 bg-black/90 backdrop-blur-md z-40 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-40 flex items-center justify-center">
             <div className="bg-linear-to-br from-red-900 to-gray-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border-2 border-red-500">
               <h2 className="text-5xl font-bold text-red-400 text-center mb-4 animate-pulse">
                 💀 GAME OVER
@@ -614,6 +828,48 @@ export default function LevelPage({ params }) {
                   className="w-full px-6 py-4 bg-yellow-600 hover:bg-yellow-700 text-white font-bold rounded-xl transition-colors text-lg"
                 >
                   🔄 Réessayer
+                </button>
+                
+                <Link
+                  href="/game"
+                  className="block w-full px-6 py-4 bg-gray-600 hover:bg-gray-700 text-white font-semibold rounded-xl transition-colors text-center"
+                >
+                  🏠 Menu Principal
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Écran de Victoire */}
+        {showVictory && (
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md z-40 flex items-center justify-center">
+            <div className="bg-linear-to-br from-yellow-900 via-amber-700 to-yellow-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl border-2 border-yellow-500">
+              <h2 className="text-5xl font-bold text-yellow-300 text-center mb-4 animate-bounce">
+                🏆 VICTOIRE !
+              </h2>
+              
+              <div className="bg-black/50 rounded-lg p-6 mb-6">
+                <p className="text-white text-center text-2xl mb-4">
+                  🐉 Vous avez vaincu le Dragon Boss !
+                </p>
+                <p className="text-yellow-400 text-center text-lg mb-2">
+                  Ninjas vaincus: <span className="font-bold">{TOTAL_NINJAS} / {TOTAL_NINJAS}</span>
+                </p>
+                <p className="text-yellow-400 text-center text-lg mb-4">
+                  Boss vaincu: <span className="font-bold">✅</span>
+                </p>
+                <p className="text-gray-300 text-center text-sm">
+                  Vous avez prouvé votre valeur de magicien guerrier !
+                </p>
+              </div>
+              
+              <div className="space-y-4">
+                <button
+                  onClick={() => window.location.reload()}
+                  className="w-full px-6 py-4 bg-yellow-500 hover:bg-yellow-600 text-black font-bold rounded-xl transition-colors text-lg"
+                >
+                  🔄 Rejouer
                 </button>
                 
                 <Link
