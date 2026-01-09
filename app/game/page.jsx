@@ -14,6 +14,27 @@ export default function Game() {
     { label: "Exit", action: () => router.push("/") },
   ];
 
+  // Passer en plein écran au montage du composant
+  useEffect(() => {
+    const enterFullscreen = async () => {
+      try {
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        } else if (document.documentElement.webkitRequestFullscreen) {
+          // Safari
+          await document.documentElement.webkitRequestFullscreen();
+        } else if (document.documentElement.msRequestFullscreen) {
+          // IE11
+          await document.documentElement.msRequestFullscreen();
+        }
+      } catch (err) {
+        console.log('Impossible de passer en plein écran:', err);
+      }
+    };
+
+    enterFullscreen();
+  }, []);
+
   // Gestion du clavier
   useEffect(() => {
     const handleKeyDown = (e) => {
