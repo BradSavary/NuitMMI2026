@@ -30,6 +30,13 @@ export default function SpellHUD({ detectedSpell, onSpellReady, spellCooldown = 
       description: "Flèche de glace perçante",
       pose: "ice"
     },
+    verticalLine: {
+      name: "Earthquake",
+      icon: "/spell/ground/particule.svg",
+      element: "earth",
+      description: "Tremblement de terre dévastateur",
+      pose: "terre"
+    },
     fistRaised: {
       name: "Shield",
       icon: "/spell/shield/spell.png",
@@ -92,6 +99,17 @@ export default function SpellHUD({ detectedSpell, onSpellReady, spellCooldown = 
       textAccent: 'text-cyan-300',
       barBg: 'bg-cyan-950',
       barGradient: 'from-cyan-400 to-blue-500'
+    },
+    earth: {
+      bgGradient: 'from-green-900/90 to-emerald-900/90',
+      border: 'border-green-500',
+      iconBg: 'bg-green-500/20',
+      iconBorder: 'border-green-400',
+      iconShadow: 'drop-shadow-[0_0_10px_rgba(34,197,94,0.8)]',
+      textColor: 'text-green-200',
+      textAccent: 'text-green-300',
+      barBg: 'bg-green-950',
+      barGradient: 'from-green-400 to-emerald-500'
     },
     shield: {
       bgGradient: 'from-purple-900/90 to-indigo-900/90',

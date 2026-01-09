@@ -76,7 +76,8 @@ export default function LevelPage({ params }) {
   // Configuration des dégâts
   const SPELL_DAMAGE = {
     fireball: 3,
-    ice: 3,
+    ice: 2,
+    earth: 5, // Earthquake : plus puissant
     thunder: 2
   };
 
@@ -613,6 +614,8 @@ export default function LevelPage({ params }) {
       playSound('fireball');
     } else if (spell.element === 'ice') {
       playSound('icespear');
+    } else if (spell.element === 'earth') {
+      playSound('earthquake');
     } else if (spell.element === 'thunder') {
       playSound('lightning');
     }
@@ -777,6 +780,8 @@ export default function LevelPage({ params }) {
                   ? `/MC/MC-pose-fireball.svg`
                   : characterPose === 'ice'
                   ? `/MC/MC-pose-ice.svg`
+                  : characterPose === 'terre'
+                  ? `/MC/MC-pose-terre.svg`
                   : `/MC/MC-pose-neutral-${characterFrame}.svg`
               }
               alt="Main Character"
