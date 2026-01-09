@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 
@@ -11,7 +13,7 @@ export default function Home() {
             className="text-[128px] leading-[95px] tracking-[4px] uppercase mb-6 text-black"
             style={{ fontFamily: "'Pixelify Sans', sans-serif", fontWeight: 'bold' }}
           >
-            GESTURE RPG
+            Wizard Quest
           </h1>
           <p className="text-2xl text-gray-900 mb-12 max-w-[634px] mx-auto ">
             A revolutionary 2D RPG where your movements become magical spells
@@ -26,7 +28,14 @@ export default function Home() {
             </Link>
             <a 
               href="#features" 
-              className="px-8 py-4 bg-white hover:bg-gray-50 text-gray-900   rounded-xl font-bold text-lg transition-all transform hover:scale-105"
+              onClick={(e) => {
+                e.preventDefault();
+                document.querySelector('#features')?.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'start'
+                });
+              }}
+              className="px-8 py-4 bg-white hover:bg-gray-50 text-gray-900   rounded-xl font-bold text-lg transition-all transform hover:scale-105 cursor-pointer"
             >
               Discover
             </a>
@@ -424,7 +433,7 @@ export default function Home() {
               { name: 'Next.js' },
               { name: 'p5.js' },
               { name: 'ml5.js' },
-              { name: 'JavaScript ES6' },
+              { name: 'JavaScript' },
               { name: 'TailwindCSS' },
             ].map((tech) => (
               <div key={tech.name} className="bg-white px-6 py-4 rounded-lg border border-gray-200 transition-all">
