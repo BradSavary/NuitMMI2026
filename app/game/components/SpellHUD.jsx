@@ -30,6 +30,13 @@ export default function SpellHUD({ detectedSpell, onSpellReady, spellCooldown = 
       description: "Flèche de glace perçante",
       pose: "ice"
     },
+    verticalLine: {
+      name: "Earthquake",
+      icon: "/spell/ground/particule.svg",
+      element: "earth",
+      description: "Tremblement de terre dévastateur",
+      pose: "terre"
+    },
     fistRaised: {
       name: "Shield",
       icon: "/spell/shield/spell.png",
@@ -43,7 +50,8 @@ export default function SpellHUD({ detectedSpell, onSpellReady, spellCooldown = 
   useEffect(() => {
     if (detectedSpell && spellMapping[detectedSpell]) {
       setShowSpell(true);
-      setIsPulsing(true);
+      // Ne pulser que si en cooldown
+      setIsPulsing(spellCooldown);
       
       // Notifier que le sort est prêt
       if (onSpellReady) {
@@ -62,7 +70,7 @@ export default function SpellHUD({ detectedSpell, onSpellReady, spellCooldown = 
       setIsPulsing(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [detectedSpell]);
+  }, [detectedSpell, spellCooldown]); // Ajouter spellCooldown comme dépendance
 
   if (!showSpell || !detectedSpell) return null;
 
@@ -93,6 +101,17 @@ export default function SpellHUD({ detectedSpell, onSpellReady, spellCooldown = 
       barBg: 'bg-cyan-950',
       barGradient: 'from-cyan-400 to-blue-500'
     },
+    earth: {
+      bgGradient: 'from-green-900/90 to-emerald-900/90',
+      border: 'border-green-500',
+      iconBg: 'bg-green-500/20',
+      iconBorder: 'border-green-400',
+      iconShadow: 'drop-shadow-[0_0_10px_rgba(34,197,94,0.8)]',
+      textColor: 'text-green-200',
+      textAccent: 'text-green-300',
+      barBg: 'bg-green-950',
+      barGradient: 'from-green-400 to-emerald-500'
+    },
     shield: {
       bgGradient: 'from-purple-900/90 to-indigo-900/90',
       border: 'border-purple-500',
@@ -117,6 +136,7 @@ export default function SpellHUD({ detectedSpell, onSpellReady, spellCooldown = 
           rounded-xl p-4 shadow-2xl
           transition-all duration-300
           ${isPulsing ? 'animate-pulse scale-105' : 'scale-100'}
+          ${spellCooldown ? 'opacity-50 grayscale' : 'opacity-100'}
         `}
       >
         {/* Icône du sort */}
@@ -149,24 +169,7 @@ export default function SpellHUD({ detectedSpell, onSpellReady, spellCooldown = 
             )}
           </div>
         </div>
-
-        {/* Barre de temps restant */}
-        <div className={`mt-3 h-1 ${colors.barBg} rounded-full overflow-hidden`}>
-          <div
-            className={`h-full bg-linear-to-r ${colors.barGradient}`}
-            style={{
-              animation: 'shrink 5s linear forwards'
-            }}
-          />
-        </div>
       </div>
-
-      <style jsx>{`
-        @keyframes shrink {
-          from { width: 100%; }
-          to { width: 0%; }
-        }
-      `}</style>
     </div>
   );
 }
