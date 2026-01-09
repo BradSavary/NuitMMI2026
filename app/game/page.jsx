@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useGameAudio } from "../../lib/hooks/useGameAudio";
 
 export default function Game() {
   const router = useRouter();
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const { playSound, stopSound } = useGameAudio();
   
   const menuItems = [
     { label: "Continue", action: () => router.push("/game/level/1") },
@@ -14,7 +16,7 @@ export default function Game() {
     { label: "Exit", action: () => router.push("/") },
   ];
 
-  // Passer en plein écran au montage du composant
+  // Passer en plein écran au montage du composant + démarrer la musique principale
   useEffect(() => {
     const enterFullscreen = async () => {
       try {
@@ -33,6 +35,14 @@ export default function Game() {
     };
 
     enterFullscreen();
+    
+    // Démarrer la musique principale
+    playSound('mainSong');
+    
+    // Arrêter la musique au démontage du composant
+    return () => {
+      stopSound('mainSong');
+    };
   }, []);
 
   // Gestion du clavier

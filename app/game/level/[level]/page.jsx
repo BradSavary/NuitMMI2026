@@ -11,6 +11,7 @@ import EnemyProjectile from "../../components/EnemyProjectile";
 import HealthBar from "../../components/HealthBar";
 import DragonBoss from "../../components/DragonBoss";
 import BossProjectile from "../../components/BossProjectile";
+import { useGameAudio } from "../../../../lib/hooks/useGameAudio";
 
 export default function LevelPage({ params }) {
   const { level } = use(params);
@@ -21,6 +22,9 @@ export default function LevelPage({ params }) {
   const [bgWidth, setBgWidth] = useState(1920);
   const animationRef = useRef(null);
   const isPausedRef = useRef(false); // Ref pour isPaused
+  
+  // Hook audio
+  const { playSound, stopSound } = useGameAudio(isPaused);
   
   // État pour les sorts
   const [detectedGesture, setDetectedGesture] = useState(null);
@@ -103,6 +107,20 @@ export default function LevelPage({ params }) {
   useEffect(() => {
     totalBgCountRef.current = totalBgCount;
   }, [totalBgCount]);
+  
+  // Démarrer la musique du niveau et les footsteps quand le jeu commence
+  useEffect(() => {
+    if (!isLoading && !isGameOver) {
+      playSound('levelSong');
+      playSound('footsteps');
+    }
+    
+    // Arrêter les sons au démontage du composant ou game over
+    return () => {
+      stopSound('levelSong');
+      stopSound('footsteps');
+    };
+  }, [isLoading, isGameOver]);
   
   // Animation de la barre de progression du chargement
   useEffect(() => {
@@ -280,6 +298,9 @@ export default function LevelPage({ params }) {
       }
       return;
     }
+    
+    // Jouer le son de dégâts
+    playSound('damage');
     
     setPlayerHealth(prev => {
       const newHealth = Math.max(0, prev - damage);
@@ -532,6 +553,7 @@ export default function LevelPage({ params }) {
       
       // Activer le shield
       console.log('🛡️ Shield activé !');
+      playSound('shield');
       setShieldActive(true);
       setIsInvincible(true);
       setCharacterPose('shield');
@@ -586,6 +608,15 @@ export default function LevelPage({ params }) {
     
     // 1. Changer la pose du personnage selon le sort
     setCharacterPose(spell.pose || 'fireball');
+    
+    // 1.5. Jouer le son correspondant au sort
+    if (spell.element === 'fire') {
+      playSound('fireball');
+    } else if (spell.element === 'ice') {
+      playSound('icespear');
+    } else if (spell.element === 'thunder') {
+      playSound('lightning');
+    }
     
     // 2. Créer le projectile
     const characterElement = document.querySelector('.character-position');
