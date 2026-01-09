@@ -553,7 +553,6 @@ export default function LevelPage({ params }) {
       
       // Activer le shield
       console.log('🛡️ Shield activé !');
-      playSound('shield');
       setShieldActive(true);
       setIsInvincible(true);
       setCharacterPose('shield');
@@ -758,7 +757,7 @@ export default function LevelPage({ params }) {
             {shieldActive && (
               <div className="absolute inset-0 z-20 animate-pulse scale-125">
                 <Image
-                  src="/spell/shield/spell.svg"
+                  src="/spell/shield/spell.png"
                   alt="Shield Effect"
                   fill
                   className="object-contain drop-shadow-[0_0_20px_rgba(168,85,247,0.9)]"
