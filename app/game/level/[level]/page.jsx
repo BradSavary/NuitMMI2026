@@ -7,7 +7,9 @@ import SpellHUD from "../../components/SpellHUD";
 import GestureCamera from "../../components/GestureCamera";
 import SpellProjectile from "../../components/SpellProjectile";
 import NinjaEnemy from "../../components/NinjaEnemy";
+import GhostEnemy from "../../components/GhostEnemy";
 import EnemyProjectile from "../../components/EnemyProjectile";
+import GhostProjectile from "../../components/GhostProjectile";
 import HealthBar from "../../components/HealthBar";
 import DragonBoss from "../../components/DragonBoss";
 import BossProjectile from "../../components/BossProjectile";
@@ -30,12 +32,16 @@ export default function LevelPage({ params }) {
   const [detectedGesture, setDetectedGesture] = useState(null);
   const [readySpell, setReadySpell] = useState(null);
   const [activeProjectiles, setActiveProjectiles] = useState([]);
+  const [gestureDetectionEnabled, setGestureDetectionEnabled] = useState(true);
   const projectileIdRef = useRef(0);
   
-  // Cooldown des sorts (1 seconde)
+  // Cooldown des sorts
   const [spellCooldown, setSpellCooldown] = useState(false);
+  const [currentCooldownDuration, setCurrentCooldownDuration] = useState(300);
   const lastSpellTimeRef = useRef(0);
-  const SPELL_COOLDOWN_MS = 300; // 1 seconde
+  const SPELL_COOLDOWN_MS = 300; // 300ms pour les sorts offensifs
+  const SHIELD_COOLDOWN_MS = 2000; // 2000ms (2 secondes) pour le shield
+  const GESTURE_DETECTION_DELAY_MS = 300; // 300ms avant nouvelle détection
   
   // État du chargement et détection des mains
   const [isLoading, setIsLoading] = useState(true);
@@ -47,17 +53,16 @@ export default function LevelPage({ params }) {
   const [isGameOver, setIsGameOver] = useState(false);
   const [isInvincible, setIsInvincible] = useState(false);
   const [shieldActive, setShieldActive] = useState(false);
-  const [shieldCooldown, setShieldCooldown] = useState(false);
-  const shieldCooldownTimeRef = useRef(0);
   const SHIELD_DURATION_MS = 1500; // 1.5 secondes
-  const SHIELD_COOLDOWN_MS = 3000; // 3 secondes
   
-  // État des ennemis
-  const [ninjas, setNinjas] = useState([]);
+  // État des ennemis (mélange de ninjas et ghosts)
+  const [enemies, setEnemies] = useState([]); // Format: { id, type: 'ninja'|'ghost', startX, startY, health }
   const [enemyProjectiles, setEnemyProjectiles] = useState([]);
+  const [ghostProjectiles, setGhostProjectiles] = useState([]);
   const enemyProjectileIdRef = useRef(0);
-  const [currentNinjaIndex, setCurrentNinjaIndex] = useState(0);
-  const TOTAL_NINJAS = 5;
+  const ghostProjectileIdRef = useRef(0);
+  const [currentEnemyIndex, setCurrentEnemyIndex] = useState(0);
+  const TOTAL_ENEMIES = 5;
   
   // État du boss
   const [bossActive, setBossActive] = useState(false);
@@ -76,7 +81,8 @@ export default function LevelPage({ params }) {
   // Configuration des dégâts
   const SPELL_DAMAGE = {
     fireball: 3,
-    ice: 3,
+    ice: 2,
+    earth: 5, // Earthquake : plus puissant
     thunder: 2
   };
 
@@ -148,89 +154,103 @@ export default function LevelPage({ params }) {
     return () => clearInterval(interval);
   }, [isLoading, handsDetected]);
   
-  // Gestion des ninjas - Spawn du premier ninja puis les suivants
+  // Gestion des ennemis - Spawn du premier ennemi puis les suivants
   useEffect(() => {
     if (isGameOver || isPaused || isLoading) return;
     
-    // Spawn du premier ninja au démarrage (après 2 secondes)
-    if (ninjas.length === 0 && currentNinjaIndex === 0) {
+    // Spawn du premier ennemi au démarrage (après 2 secondes)
+    if (enemies.length === 0 && currentEnemyIndex === 0) {
       setTimeout(() => {
-        spawnNinja(0);
+        spawnEnemy(0);
       }, 2000);
     }
-  }, [isGameOver, isPaused, isLoading, ninjas.length, currentNinjaIndex]);
+  }, [isGameOver, isPaused, isLoading, enemies.length, currentEnemyIndex]);
   
-  // Fonction pour faire apparaître un ninja
-  const spawnNinja = (index) => {
-    if (index >= TOTAL_NINJAS) return; // Plus de ninjas à faire apparaître
+  // Fonction pour faire apparaître un ennemi (aléatoirement ninja ou ghost)
+  const spawnEnemy = (index) => {
+    if (index >= TOTAL_ENEMIES) return; // Plus d'ennemis à faire apparaître
     
-    const newNinja = {
-      id: `ninja-${index}`,
+    // Choix aléatoire : 50% Ninja, 50% Ghost
+    const enemyType = Math.random() < 0.5 ? 'ninja' : 'ghost';
+    
+    const newEnemy = {
+      id: `${enemyType}-${index}`,
+      type: enemyType,
       startX: window.innerWidth + 100, // Spawn à droite de l'écran
       startY: window.innerHeight * 0.76, // Plus bas (75% au lieu de 70%)
-      health: 5,
+      health: enemyType === 'ninja' ? 5 : 1, // Ghost n'a pas vraiment de santé (invulnérable)
       index: index
     };
     
-    setNinjas([newNinja]); // Un seul ninja à la fois
+    console.log(`Spawn de l'ennemi ${index + 1}/${TOTAL_ENEMIES}: ${enemyType}`);
+    setEnemies([newEnemy]); // Un seul ennemi à la fois
   };
   
-  // Gestion de la mort d'un ninja
-  const handleNinjaDeath = (ninjaId) => {
-    console.log('Ninja mort:', ninjaId);
-    setNinjas(prev => prev.filter(n => n.id !== ninjaId));
+  // Gestion de la mort d'un ennemi (ninja ou disparition d'un ghost)
+  const handleEnemyDeath = (enemyId) => {
+    console.log('Ennemi mort/disparu:', enemyId);
+    setEnemies(prev => prev.filter(n => n.id !== enemyId));
     
-    // Incrémenter le compteur de ninjas traités (morts ou ayant touché le joueur)
-    const ninjasProcessed = currentNinjaIndex + 1;
-    console.log(`Ninjas traités: ${ninjasProcessed} / ${TOTAL_NINJAS}`);
+    // Incrémenter le compteur d'ennemis traités (morts ou ayant touché le joueur ou disparus)
+    const enemiesProcessed = currentEnemyIndex + 1;
+    console.log(`Ennemis traités: ${enemiesProcessed} / ${TOTAL_ENEMIES}`);
     
-    // Faire apparaître le prochain ninja après un délai
-    const nextIndex = currentNinjaIndex + 1;
-    if (nextIndex < TOTAL_NINJAS) {
+    // Faire apparaître le prochain ennemi après un délai
+    const nextIndex = currentEnemyIndex + 1;
+    if (nextIndex < TOTAL_ENEMIES) {
       setTimeout(() => {
-        setCurrentNinjaIndex(nextIndex);
-        spawnNinja(nextIndex);
-      }, 2000); // 2 secondes avant le prochain ninja
+        setCurrentEnemyIndex(nextIndex);
+        spawnEnemy(nextIndex);
+      }, 2000); // 2 secondes avant le prochain ennemi
     } else {
-      // Tous les ninjas ont été vaincus - Faire apparaître le boss !
-      console.log('🎉 Tous les ninjas ont été vaincus ! Le boss arrive...');
+      // Tous les ennemis ont été vaincus - Faire apparaître le boss !
+      console.log('🎉 Tous les ennemis ont été vaincus ! Le boss arrive...');
       spawnBoss();
     }
   };
   
-  // Gestion de l'arrivée d'un ninja au joueur (corps à corps)
-  const handleNinjaReachPlayer = (ninjaId, damage) => {
-    console.log('Ninja atteint le joueur:', ninjaId, 'dégâts:', damage);
+  // Gestion de l'arrivée d'un ninja au joueur (corps à corps) - Les ghosts ne peuvent pas atteindre le joueur
+  const handleEnemyReachPlayer = (enemyId, damage) => {
+    console.log('Ennemi atteint le joueur:', enemyId, 'dégâts:', damage);
     playerTakeDamage(damage);
     
-    // Retirer le ninja qui a attaqué
-    setNinjas(prev => prev.filter(n => n.id !== ninjaId));
+    // Retirer l'ennemi qui a attaqué
+    setEnemies(prev => prev.filter(n => n.id !== enemyId));
     
-    // Incrémenter le compteur de ninjas traités
-    const ninjasProcessed = currentNinjaIndex + 1;
-    console.log(`Ninjas traités: ${ninjasProcessed} / ${TOTAL_NINJAS}`);
+    // Incrémenter le compteur d'ennemis traités
+    const enemiesProcessed = currentEnemyIndex + 1;
+    console.log(`Ennemis traités: ${enemiesProcessed} / ${TOTAL_ENEMIES}`);
     
-    // Faire apparaître le prochain ninja
-    const nextIndex = currentNinjaIndex + 1;
-    if (nextIndex < TOTAL_NINJAS) {
+    // Faire apparaître le prochain ennemi
+    const nextIndex = currentEnemyIndex + 1;
+    if (nextIndex < TOTAL_ENEMIES) {
       setTimeout(() => {
-        setCurrentNinjaIndex(nextIndex);
-        spawnNinja(nextIndex);
+        setCurrentEnemyIndex(nextIndex);
+        spawnEnemy(nextIndex);
       }, 2000);
     } else {
-      // Tous les ninjas sont passés - Faire apparaître le boss
-      console.log('🎉 Tous les ninjas sont passés ! Le boss arrive...');
+      // Tous les ennemis sont passés - Faire apparaître le boss
+      console.log('🎉 Tous les ennemis sont passés ! Le boss arrive...');
       spawnBoss();
     }
   };
   
-  // Gestion du sort lancé par un ninja
-  const handleNinjaSpellCast = (spellData) => {
-    console.log('Ninja lance un sort:', spellData);
-    setEnemyProjectiles(prev => [...prev, {
-      ...spellData,
-      id: `enemy-spell-${enemyProjectileIdRef.current++}`
-    }]);
+  // Gestion du sort lancé par un ennemi
+  const handleEnemySpellCast = (spellData) => {
+    console.log('Ennemi lance un sort:', spellData);
+    
+    // Différencier selon le type de projectile
+    if (spellData.type === 'ghost') {
+      setGhostProjectiles(prev => [...prev, {
+        ...spellData,
+        id: `ghost-spell-${ghostProjectileIdRef.current++}`
+      }]);
+    } else {
+      setEnemyProjectiles(prev => [...prev, {
+        ...spellData,
+        id: `enemy-spell-${enemyProjectileIdRef.current++}`
+      }]);
+    }
   };
   
   // Fonction pour faire apparaître le boss
@@ -319,7 +339,7 @@ export default function LevelPage({ params }) {
     }, 1000);
   };
   
-  // Détection des collisions entre sorts du joueur et ninjas
+  // Détection des collisions entre sorts du joueur et ennemis
   useEffect(() => {
     if (isPaused || isGameOver) return;
     
@@ -334,37 +354,42 @@ export default function LevelPage({ params }) {
         
         const projectileRect = projectileEl.getBoundingClientRect();
         
-        // Pour chaque ninja
-        ninjas.forEach(ninja => {
-          const ninjaEl = document.querySelector(`[data-enemy-id="${ninja.id}"]`);
-          if (!ninjaEl) {
-            // console.log(`❌ Ninja ${ninja.id} non trouvé dans le DOM`);
+        // Pour chaque ennemi
+        enemies.forEach(enemy => {
+          const enemyEl = document.querySelector(`[data-enemy-id="${enemy.id}"]`);
+          if (!enemyEl) {
+            // console.log(`❌ Ennemi ${enemy.id} non trouvé dans le DOM`);
             return;
           }
           
-          const ninjaRect = ninjaEl.getBoundingClientRect();
+          // Ignorer les ghosts (invulnérables)
+          if (enemy.type === 'ghost') {
+            return;
+          }
+          
+          const enemyRect = enemyEl.getBoundingClientRect();
           
           // Vérifier la collision (AABB simple avec une marge de tolérance)
           const margin = 20; // Marge de tolérance pour faciliter les collisions
           if (
-            projectileRect.left < ninjaRect.right + margin &&
-            projectileRect.right > ninjaRect.left - margin &&
-            projectileRect.top < ninjaRect.bottom + margin &&
-            projectileRect.bottom > ninjaRect.top - margin
+            projectileRect.left < enemyRect.right + margin &&
+            projectileRect.right > enemyRect.left - margin &&
+            projectileRect.top < enemyRect.bottom + margin &&
+            projectileRect.bottom > enemyRect.top - margin
           ) {
             // Collision détectée !
-            console.log(`💥 Collision: Sort ${projectile.spell?.element} touche ninja ${ninja.id}, santé avant: ${ninja.health}`);
+            console.log(`💥 Collision: Sort ${projectile.spell?.element} touche ${enemy.type} ${enemy.id}, santé avant: ${enemy.health}`);
             
-            // Infliger des dégâts au ninja
+            // Infliger des dégâts à l'ennemi (seulement les ninjas)
             const damage = SPELL_DAMAGE[projectile.spell?.element] || 1;
-            const newHealth = ninja.health - damage;
+            const newHealth = enemy.health - damage;
             
             console.log(`   ➡️ Dégâts: ${damage}, nouvelle santé: ${newHealth}`);
             
-            setNinjas(prev => prev.map(n => 
-              n.id === ninja.id 
-                ? { ...n, health: newHealth }
-                : n
+            setEnemies(prev => prev.map(e => 
+              e.id === enemy.id 
+                ? { ...e, health: newHealth }
+                : e
             ));
             
             // Détruire le projectile
@@ -403,7 +428,7 @@ export default function LevelPage({ params }) {
         }
       });
       
-      // Pour chaque projectile ennemi
+      // Pour chaque projectile ennemi (ninjas)
       enemyProjectiles.forEach(enemyProj => {
         const projEl = document.querySelector(`[data-projectile-id="${enemyProj.id}"][data-projectile-type="enemy"]`);
         if (!projEl) return;
@@ -428,6 +453,34 @@ export default function LevelPage({ params }) {
           
           // Détruire le projectile
           setEnemyProjectiles(prev => prev.filter(p => p.id !== enemyProj.id));
+        }
+      });
+      
+      // Pour chaque projectile de ghost
+      ghostProjectiles.forEach(ghostProj => {
+        const projEl = document.querySelector(`[data-projectile-id="${ghostProj.id}"][data-projectile-type="ghost"]`);
+        if (!projEl) return;
+        
+        const projRect = projEl.getBoundingClientRect();
+        const playerEl = document.querySelector('.character-position');
+        if (!playerEl) return;
+        
+        const playerRect = playerEl.getBoundingClientRect();
+        
+        // Vérifier collision avec le joueur
+        if (
+          projRect.left < playerRect.right &&
+          projRect.right > playerRect.left &&
+          projRect.top < playerRect.bottom &&
+          projRect.bottom > playerRect.top
+        ) {
+          console.log('Collision: Sort de ghost touche le joueur (3 PV de dégâts)');
+          
+          // Infliger 3 PV de dégâts
+          playerTakeDamage(ghostProj.damage || 3);
+          
+          // Détruire le projectile
+          setGhostProjectiles(prev => prev.filter(p => p.id !== ghostProj.id));
         }
       });
       
@@ -461,7 +514,7 @@ export default function LevelPage({ params }) {
     }, 50); // Vérifier toutes les 50ms
     
     return () => clearInterval(checkInterval);
-  }, [activeProjectiles, ninjas, enemyProjectiles, bossProjectiles, boss, bossActive, isPaused, isGameOver, isInvincible]);
+  }, [activeProjectiles, enemies, enemyProjectiles, ghostProjectiles, bossProjectiles, boss, bossActive, isPaused, isGameOver, isInvincible]);
 
   // Animation du background qui défile
   useEffect(() => {
@@ -542,24 +595,31 @@ export default function LevelPage({ params }) {
   const launchSpell = (spell) => {
     if (isGameOver) return;
     
+    // Déterminer le cooldown nécessaire selon le type de sort
+    const requiredCooldown = spell.isDefensive ? SHIELD_COOLDOWN_MS : SPELL_COOLDOWN_MS;
+    
+    // Vérifier le cooldown commun pour TOUS les sorts
+    const now = Date.now();
+    if (spellCooldown || (now - lastSpellTimeRef.current) < requiredCooldown) {
+      console.log('Sort en cooldown, veuillez attendre...');
+      return;
+    }
+    
     // Si c'est un sort défensif (shield)
     if (spell.isDefensive) {
-      // Vérifier le cooldown spécifique du shield
-      const now = Date.now();
-      if (shieldCooldown || (now - shieldCooldownTimeRef.current) < SHIELD_COOLDOWN_MS) {
-        console.log('Shield en cooldown, veuillez attendre...');
-        return;
-      }
-      
       // Activer le shield
       console.log('🛡️ Shield activé !');
       setShieldActive(true);
       setIsInvincible(true);
       setCharacterPose('shield');
       
-      // Activer le cooldown du shield
-      setShieldCooldown(true);
-      shieldCooldownTimeRef.current = now;
+      // Activer le cooldown commun avec la durée du shield
+      setSpellCooldown(true);
+      setCurrentCooldownDuration(SHIELD_COOLDOWN_MS);
+      lastSpellTimeRef.current = now;
+      
+      // Jouer le son du shield
+      playSound('shield');
       
       // Désactiver le shield après 1.5 secondes
       setTimeout(() => {
@@ -569,38 +629,37 @@ export default function LevelPage({ params }) {
         console.log('🛡️ Shield désactivé');
       }, SHIELD_DURATION_MS);
       
-      // Réactiver le shield après le cooldown (3 secondes)
+      // Réactiver les sorts après le cooldown du shield (plus long)
       setTimeout(() => {
-        setShieldCooldown(false);
-        console.log('🛡️ Shield prêt à être réutilisé');
+        setSpellCooldown(false);
       }, SHIELD_COOLDOWN_MS);
       
       // Réinitialiser la détection
       setDetectedGesture(null);
       setReadySpell(null);
       
+      // Bloquer la détection de gestes
+      setGestureDetectionEnabled(false);
+      setTimeout(() => {
+        setGestureDetectionEnabled(true);
+      }, GESTURE_DETECTION_DELAY_MS);
+      
       return; // Ne pas créer de projectile pour le shield
     }
     
-    // Pour les sorts offensifs (fireball, ice)
+    // Pour les sorts offensifs (fireball, ice, earthquake)
     // Bloquer si le shield est actif
     if (shieldActive) {
       console.log('Impossible de lancer un sort pendant que le shield est actif');
       return;
     }
     
-    // Vérifier le cooldown
-    const now = Date.now();
-    if (spellCooldown || (now - lastSpellTimeRef.current) < SPELL_COOLDOWN_MS) {
-      console.log('Sort en cooldown, veuillez attendre...');
-      return;
-    }
-    
-    // Activer le cooldown
+    // Activer le cooldown commun avec la durée normale
     setSpellCooldown(true);
+    setCurrentCooldownDuration(SPELL_COOLDOWN_MS);
     lastSpellTimeRef.current = now;
     
-    // Désactiver le cooldown après 1 seconde
+    // Désactiver le cooldown après SPELL_COOLDOWN_MS
     setTimeout(() => {
       setSpellCooldown(false);
     }, SPELL_COOLDOWN_MS);
@@ -613,6 +672,8 @@ export default function LevelPage({ params }) {
       playSound('fireball');
     } else if (spell.element === 'ice') {
       playSound('icespear');
+    } else if (spell.element === 'earth') {
+      playSound('earthquake');
     } else if (spell.element === 'thunder') {
       playSound('lightning');
     }
@@ -638,6 +699,12 @@ export default function LevelPage({ params }) {
     setDetectedGesture(null);
     setReadySpell(null);
     
+    // 3.5. Bloquer la détection de gestes pendant GESTURE_DETECTION_DELAY_MS
+    setGestureDetectionEnabled(false);
+    setTimeout(() => {
+      setGestureDetectionEnabled(true);
+    }, GESTURE_DETECTION_DELAY_MS);
+    
     // 4. Revenir à la pose neutre après 500ms
     setTimeout(() => {
       setCharacterPose('neutral');
@@ -646,6 +713,11 @@ export default function LevelPage({ params }) {
 
   // Callback quand un geste est détecté
   const handleGestureDetected = (gesture, confidence) => {
+    // Ignorer les gestes si la détection est bloquée
+    if (!gestureDetectionEnabled) {
+      return;
+    }
+    
     console.log('Geste détecté:', gesture, 'confiance:', confidence);
     setDetectedGesture(gesture);
     
@@ -669,6 +741,11 @@ export default function LevelPage({ params }) {
   // Callback quand un projectile ennemi doit être détruit
   const handleEnemyProjectileDestroy = (id) => {
     setEnemyProjectiles(prev => prev.filter(p => p.id !== id));
+  };
+  
+  // Callback quand un projectile de ghost doit être détruit
+  const handleGhostProjectileDestroy = (id) => {
+    setGhostProjectiles(prev => prev.filter(p => p.id !== id));
   };
   
   // Callback quand un projectile du boss doit être détruit
@@ -777,6 +854,8 @@ export default function LevelPage({ params }) {
                   ? `/MC/MC-pose-fireball.svg`
                   : characterPose === 'ice'
                   ? `/MC/MC-pose-ice.svg`
+                  : characterPose === 'terre'
+                  ? `/MC/MC-pose-terre.svg`
                   : `/MC/MC-pose-neutral-${characterFrame}.svg`
               }
               alt="Main Character"
@@ -786,21 +865,39 @@ export default function LevelPage({ params }) {
           </div>
         </div>
 
-        {/* Ninjas ennemis */}
-        {ninjas.map(ninja => (
-          <NinjaEnemy
-            key={ninja.id}
-            id={ninja.id}
-            startX={ninja.startX}
-            startY={ninja.startY}
-            health={ninja.health}
-            onReachPlayer={handleNinjaReachPlayer}
-            onDeath={handleNinjaDeath}
-            onSpellCast={handleNinjaSpellCast}
-            scrollSpeed={scrollSpeedRef.current}
-            isPaused={isPaused}
-          />
-        ))}
+        {/* Ennemis (Ninjas et Ghosts) */}
+        {enemies.map(enemy => {
+          if (enemy.type === 'ninja') {
+            return (
+              <NinjaEnemy
+                key={enemy.id}
+                id={enemy.id}
+                startX={enemy.startX}
+                startY={enemy.startY}
+                health={enemy.health}
+                onReachPlayer={handleEnemyReachPlayer}
+                onDeath={handleEnemyDeath}
+                onSpellCast={handleEnemySpellCast}
+                scrollSpeed={scrollSpeedRef.current}
+                isPaused={isPaused}
+              />
+            );
+          } else if (enemy.type === 'ghost') {
+            return (
+              <GhostEnemy
+                key={enemy.id}
+                id={enemy.id}
+                startX={enemy.startX}
+                startY={enemy.startY}
+                onDeath={handleEnemyDeath}
+                onSpellCast={handleEnemySpellCast}
+                scrollSpeed={scrollSpeedRef.current}
+                isPaused={isPaused}
+              />
+            );
+          }
+          return null;
+        })}
 
         {/* Dragon Boss */}
         {boss && bossActive && (
@@ -828,7 +925,7 @@ export default function LevelPage({ params }) {
           />
         ))}
         
-        {/* Projectiles ennemis */}
+        {/* Projectiles ennemis (Ninjas) */}
         {enemyProjectiles.map(projectile => (
           <EnemyProjectile
             key={projectile.id}
@@ -837,6 +934,19 @@ export default function LevelPage({ params }) {
             startY={projectile.startY}
             damage={projectile.damage}
             onDestroy={handleEnemyProjectileDestroy}
+            isPaused={isPaused}
+          />
+        ))}
+        
+        {/* Projectiles des Ghosts */}
+        {ghostProjectiles.map(projectile => (
+          <GhostProjectile
+            key={projectile.id}
+            id={projectile.id}
+            startX={projectile.startX}
+            startY={projectile.startY}
+            damage={projectile.damage}
+            onDestroy={handleGhostProjectileDestroy}
             isPaused={isPaused}
           />
         ))}
@@ -1022,6 +1132,12 @@ export default function LevelPage({ params }) {
           onSpellReady={handleSpellReady}
           spellCooldown={spellCooldown}
         />
+
+        {/* Indicateur de cooldown global des sorts */}
+        {/* <SpellCooldownIndicator 
+          isOnCooldown={spellCooldown}
+          cooldownDuration={currentCooldownDuration}
+        /> */}
 
         {/* Caméra et détection de gestes */}
         <GestureCamera 

@@ -33,7 +33,8 @@ export default function SpellProjectile({
       rotation: true,
       spellImage: '/spell/fire/particle.svg',
       particleImage: '/spell/fire/particle.svg',
-      shadowColor: 'rgba(255, 165, 0, 0.8)'
+      shadowColor: 'rgba(255, 165, 0, 0.8)',
+      yOffset: 0 // Pas de décalage vertical
     },
     ice: {
       speed: 15,
@@ -44,7 +45,18 @@ export default function SpellProjectile({
       rotation: false, // Pas de rotation pour la flèche
       spellImage: '/spell/ice/spell.svg',
       particleImage: '/spell/ice/particule.svg',
-      shadowColor: 'rgba(0, 255, 255, 0.8)'
+      shadowColor: 'rgba(0, 255, 255, 0.8)',
+      yOffset: 0 // Pas de décalage vertical
+    },
+    earth: {
+      speed: 5, // Plus lent que les autres sorts
+      size: 150, // Encore plus grand pour l'effet dévastateur
+      particleCount: 12, // Plus de particules
+      particleSize: 60,
+      rotation: false, // Pas de rotation
+      spellImage: '/spell/ground/spell.svg',
+      particleImage: '/spell/ground/particule.svg',
+      yOffset: 50 // Décalage vers le bas pour raser le sol
     }
   };
 
@@ -149,7 +161,7 @@ export default function SpellProjectile({
           className="absolute pointer-events-none"
           style={{
             left: `${particle.x}px`,
-            top: `${particle.y}px`,
+            top: `${particle.y + (spellConfig.yOffset || 0)}px`,
             width: `${particle.size}px`,
             height: `${particle.size}px`,
             opacity: particle.life * 0.8, // Opacité décroissante (80% max)
@@ -175,7 +187,7 @@ export default function SpellProjectile({
         className="absolute pointer-events-none"
         style={{
           left: `${position.x}px`,
-          top: `${position.y}px`,
+          top: `${position.y + (spellConfig.yOffset || 0)}px`,
           width: `${spellConfig.size}px`,
           height: `${spellConfig.size}px`,
           transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
