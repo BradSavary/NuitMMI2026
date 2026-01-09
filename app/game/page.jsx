@@ -1,166 +1,101 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function Game() {
-  // État des niveaux : completed, available, locked
-  const [levels, setLevels] = useState([
-    { id: 1, number: 1, status: "available", completed: false },
-    { id: 2, number: 2, status: "locked", completed: false },
-    { id: 3, number: 3, status: "locked", completed: false },
-    { id: 4, number: 4, status: "locked", completed: false },
-  ]);
+  const router = useRouter();
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  
+  const menuItems = [
+    { label: "Continue", action: () => router.push("/game/level/1") },
+    { label: "New game", action: () => router.push("/game/level/1") },
+    { label: "Exit", action: () => router.push("/") },
+  ];
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-8">
-      <div className="max-w-6xl w-full">
-        {/* Titre */}
-        <h1 className="text-5xl font-bold text-center mb-12 text-white drop-shadow-lg">
-          🗼 La Tour des Épreuves
-        </h1>
-
-        {/* Container de la tour */}
-        <div className="relative flex items-center justify-center gap-8">
-          {/* Décoration gauche */}
-          <div className="hidden md:flex flex-col gap-12 items-end">
-            {[...Array(4)].map((_, i) => (
-              <div key={`left-${i}`} className="text-6xl opacity-30 hover:opacity-60 transition-opacity">
-                👟
-              </div>
-            ))}
-          </div>
-
-          {/* La tour avec les étages */}
-          <div className="relative">
-            {/* Structure de la tour */}
-            <div className="flex flex-col-reverse gap-0">
-              {levels.map((level, index) => (
-                <TowerLevel
-                  key={level.id}
-                  level={level}
-                  isTop={index === levels.length - 1}
-                  isBottom={index === 0}
-                />
-              ))}
-            </div>
-
-            {/* Piliers de la tour */}
-            <div className="absolute top-0 bottom-0 left-0 w-4 bg-gradient-to-b from-amber-700 to-amber-900 -z-10 rounded-t-lg"></div>
-            <div className="absolute top-0 bottom-0 right-0 w-4 bg-gradient-to-b from-amber-700 to-amber-900 -z-10 rounded-t-lg"></div>
-          </div>
-
-          {/* Décoration droite */}
-          <div className="hidden md:flex flex-col gap-12 items-start">
-            {[...Array(4)].map((_, i) => (
-              <div key={`right-${i}`} className="text-6xl opacity-30 hover:opacity-60 transition-opacity">
-                👟
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Boutons utilitaires */}
-        <div className="flex justify-center gap-4 mt-12">
-          <Link
-            href="/test-gesture"
-            className="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg transition-colors shadow-lg"
-          >
-            🎯 Entraînement
-          </Link>
-          <button className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg transition-colors shadow-lg">
-            ⚙️ Options
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Composant pour un étage de la tour
-function TowerLevel({ level, isTop, isBottom }) {
-  const { number, status, completed } = level;
-
-  // Styles selon le statut
-  const getStyles = () => {
-    if (status === "locked") {
-      return {
-        bg: "bg-gray-700 opacity-50",
-        border: "border-gray-600",
-        text: "text-gray-500",
-      };
-    }
-    if (status === "available") {
-      return {
-        bg: "bg-gradient-to-r from-purple-700 to-indigo-700",
-        border: "border-purple-500",
-        text: "text-white",
-      };
-    }
-    return {
-      bg: "bg-gradient-to-r from-green-700 to-emerald-700",
-      border: "border-green-500",
-      text: "text-white",
+  // Gestion du clavier
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "ArrowUp" || e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : menuItems.length - 1));
+      } else if (e.key === "ArrowDown" || e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev < menuItems.length - 1 ? prev + 1 : 0));
+            } else if (
+        e.key === "Enter" ||
+        e.key === " " ||
+        e.key === "Spacebar" ||
+        e.code === "Space"
+            ) {
+        e.preventDefault();
+        menuItems[selectedIndex].action();
+      }
     };
-  };
 
-  const styles = getStyles();
-  const isLocked = status === "locked";
-  const isAvailable = status === "available";
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedIndex, router]);
 
   return (
-    <div
-      className={`
-        relative w-80 h-32 border-4 ${styles.border} ${styles.bg}
-        ${isTop ? "rounded-t-2xl" : ""} 
-        ${isBottom ? "rounded-b-lg" : ""}
-        flex items-center justify-between px-6 py-4
-        transition-all duration-300
-        ${!isLocked ? "" : ""}
-      `}
+    <div 
+      className="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col relative"
+      style={{ 
+        backgroundImage: "url('/bg/BG-home.png')",
+      }}
     >
-      {/* Numéro de l'étage */}
-      <div className={`text-6xl font-bold ${styles.text}`}>
-        {number}
-      </div>
+      {/* Overlay pour assombrir légèrement le fond */}
+      <div className="absolute inset-0 bg-black/20 z-0"></div>
 
-      {/* Contenu de l'étage */}
-      <div className="flex flex-col items-end gap-2">
-        {/* Badge de complétion */}
-        {completed && (
-          <div className="flex items-center gap-1 bg-green-500 px-3 py-1 rounded-full text-white text-sm font-semibold">
-            ✓ Complété
-          </div>
-        )}
-
-        {/* Bouton Jouer ou Verrouillé */}
-        {isLocked ? (
-          <div className="flex items-center gap-2 text-gray-400 text-sm">
-            🔒 Verrouillé
-          </div>
-        ) : (
-          <Link
-            href={`/game/level/${number}`}
-            className={`
-              px-5 py-2 rounded-lg font-bold text-white
-              ${isAvailable 
-                ? "bg-amber-500 hover:bg-amber-600" 
-                : "bg-emerald-500 hover:bg-emerald-600"
-              }
-              transition-colors shadow-lg
-            `}
+      {/* Contenu */}
+      <div className="relative z-10 flex flex-col h-screen">
+        {/* Titre en haut */}
+        <div className="flex-none pt-12 pl-20 pb-8">
+          <h1 
+            className="text-8xl font-bold text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]"
+            style={{ fontFamily: "var(--font-pixelify-sans)" }}
           >
-            ▶️ Jouer
-          </Link>
-        )}
-      </div>
-
-      {/* Effet "No Hit" si complété sans dégâts */}
-      {completed && (
-        <div className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 px-2 py-1 rounded-full text-xs font-bold shadow-lg">
-          ⭐ No Hit
+            Wizard Quest
+          </h1>
         </div>
-      )}
+
+        {/* Menu à gauche */}
+        <div className="flex-1 flex items-center pl-20">
+          <div className="flex flex-col gap-6">
+            {menuItems.map((item, index) => (
+              <button
+                key={item.label}
+                onClick={item.action}
+                onMouseEnter={() => setSelectedIndex(index)}
+                className={`
+                  text-left text-4xl font-bold transition-all duration-200
+                  ${selectedIndex === index 
+                    ? "text-white scale-110 translate-x-4" 
+                    : "text-white/70 hover:text-white/90"
+                  }
+                `}
+                style={{ 
+                  fontFamily: "var(--font-pixelify-sans)",
+                  textShadow: selectedIndex === index 
+                    ? "0 0 20px rgba(255,255,255,0.8), 0 4px 8px rgba(0,0,0,0.8)"
+                    : "0 4px 8px rgba(0,0,0,0.8)"
+                }}
+              >
+                {selectedIndex === index && (
+                  <span className="inline-block mr-4 animate-pulse">▶</span>
+                )}
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Silhouette du ninja (bas de l'écran) */}
+        <div className="flex-none pb-8 text-center text-xs text-white/50">
+          Use ↑↓ arrows and Enter to navigate
+        </div>
+      </div>
     </div>
   );
 }
