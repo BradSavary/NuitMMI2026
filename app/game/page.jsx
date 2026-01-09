@@ -4,15 +4,18 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useGameAudio } from "../../lib/hooks/useGameAudio";
+import TutorialModal from "./components/TutorialModal";
 
 export default function Game() {
   const router = useRouter();
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [showTutorial, setShowTutorial] = useState(false);
   const { playSound, stopSound } = useGameAudio();
   
   const menuItems = [
     { label: "Continue", action: () => router.push("/game/level/1") },
     { label: "New game", action: () => router.push("/game/level/1") },
+    { label: "Tutorial", action: () => setShowTutorial(true) },
     { label: "Exit", action: () => router.push("/") },
   ];
 
@@ -127,6 +130,12 @@ export default function Game() {
           Use ↑↓ arrows and Enter to navigate
         </div>
       </div>
+      
+      {/* Modale de Tutoriel */}
+      <TutorialModal
+        isOpen={showTutorial}
+        onClose={() => setShowTutorial(false)}
+      />
     </div>
   );
 }
