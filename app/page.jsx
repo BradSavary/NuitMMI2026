@@ -335,11 +335,11 @@ export default function Home() {
           </div>
 
          {/* Mockup/Video Section */}
-          <div className="mt-16 max-w-6xl mx-auto">
+          <div className="mt-22 max-w-6xl mx-auto">
             <div className="p-8 rounded-[15px]">
               <h3 
-                className="text-[64px] leading-[36px] mb-12 text-center text-white"
-                style={{ fontFamily: "'Pixelify Sans', sans-serif", fontWeight: 'normal' }}
+                className="text-[64px] leading-[36px] mb-12 text-cente text-black text-center pixel-font"
+                
               >
                 Mockups & Visual Concepts
               </h3>
