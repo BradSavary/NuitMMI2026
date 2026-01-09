@@ -29,6 +29,14 @@ export default function SpellHUD({ detectedSpell, onSpellReady, spellCooldown = 
       element: "ice",
       description: "Flèche de glace perçante",
       pose: "ice"
+    },
+    fistRaised: {
+      name: "Shield",
+      icon: "/spell/shield/spell.svg",
+      element: "shield",
+      description: "Bouclier protecteur",
+      pose: "shield",
+      isDefensive: true // Marquer comme sort défensif
     }
   };
 
@@ -83,6 +91,17 @@ export default function SpellHUD({ detectedSpell, onSpellReady, spellCooldown = 
       textAccent: 'text-cyan-300',
       barBg: 'bg-cyan-950',
       barGradient: 'from-cyan-400 to-blue-500'
+    },
+    shield: {
+      bgGradient: 'from-purple-900/90 to-indigo-900/90',
+      border: 'border-purple-500',
+      iconBg: 'bg-purple-500/20',
+      iconBorder: 'border-purple-400',
+      iconShadow: 'drop-shadow-[0_0_10px_rgba(168,85,247,0.8)]',
+      textColor: 'text-purple-200',
+      textAccent: 'text-purple-300',
+      barBg: 'bg-purple-950',
+      barGradient: 'from-purple-400 to-indigo-500'
     }
   };
 

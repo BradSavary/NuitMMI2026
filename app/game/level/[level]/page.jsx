@@ -42,6 +42,11 @@ export default function LevelPage({ params }) {
   const [playerHealth, setPlayerHealth] = useState(10);
   const [isGameOver, setIsGameOver] = useState(false);
   const [isInvincible, setIsInvincible] = useState(false);
+  const [shieldActive, setShieldActive] = useState(false);
+  const [shieldCooldown, setShieldCooldown] = useState(false);
+  const shieldCooldownTimeRef = useRef(0);
+  const SHIELD_DURATION_MS = 1500; // 1.5 secondes
+  const SHIELD_COOLDOWN_MS = 3000; // 3 secondes
   
   // État des ennemis
   const [ninjas, setNinjas] = useState([]);
@@ -262,7 +267,13 @@ export default function LevelPage({ params }) {
   
   // Gestion des dégâts au joueur
   const playerTakeDamage = (damage) => {
-    if (isInvincible || isGameOver) return;
+    // Le shield bloque tous les dégâts
+    if (shieldActive || isInvincible || isGameOver) {
+      if (shieldActive) {
+        console.log('🛡️ Dégâts bloqués par le shield !');
+      }
+      return;
+    }
     
     setPlayerHealth(prev => {
       const newHealth = Math.max(0, prev - damage);
@@ -504,6 +515,53 @@ export default function LevelPage({ params }) {
   const launchSpell = (spell) => {
     if (isGameOver) return;
     
+    // Si c'est un sort défensif (shield)
+    if (spell.isDefensive) {
+      // Vérifier le cooldown spécifique du shield
+      const now = Date.now();
+      if (shieldCooldown || (now - shieldCooldownTimeRef.current) < SHIELD_COOLDOWN_MS) {
+        console.log('Shield en cooldown, veuillez attendre...');
+        return;
+      }
+      
+      // Activer le shield
+      console.log('🛡️ Shield activé !');
+      setShieldActive(true);
+      setIsInvincible(true);
+      setCharacterPose('shield');
+      
+      // Activer le cooldown du shield
+      setShieldCooldown(true);
+      shieldCooldownTimeRef.current = now;
+      
+      // Désactiver le shield après 1.5 secondes
+      setTimeout(() => {
+        setShieldActive(false);
+        setIsInvincible(false);
+        setCharacterPose('neutral');
+        console.log('🛡️ Shield désactivé');
+      }, SHIELD_DURATION_MS);
+      
+      // Réactiver le shield après le cooldown (3 secondes)
+      setTimeout(() => {
+        setShieldCooldown(false);
+        console.log('🛡️ Shield prêt à être réutilisé');
+      }, SHIELD_COOLDOWN_MS);
+      
+      // Réinitialiser la détection
+      setDetectedGesture(null);
+      setReadySpell(null);
+      
+      return; // Ne pas créer de projectile pour le shield
+    }
+    
+    // Pour les sorts offensifs (fireball, ice)
+    // Bloquer si le shield est actif
+    if (shieldActive) {
+      console.log('Impossible de lancer un sort pendant que le shield est actif');
+      return;
+    }
+    
     // Vérifier le cooldown
     const now = Date.now();
     if (spellCooldown || (now - lastSpellTimeRef.current) < SPELL_COOLDOWN_MS) {
@@ -657,11 +715,29 @@ export default function LevelPage({ params }) {
         </div>
 
         {/* Le personnage (fixe sur le sol à gauche de l'écran) */}
-        <div className={`absolute left-[5%] bottom-[14%] z-10 character-position ${isInvincible ? 'animate-pulse' : ''}`}>
+        <div className={`absolute left-[5%] bottom-[14%] z-10 character-position ${isInvincible && !shieldActive ? 'animate-pulse' : ''}`}>
           <div className="relative w-32 h-32 md:w-48 md:h-48">
+            {/* Effet visuel du shield */}
+            {shieldActive && (
+              <div className="absolute inset-0 z-20 animate-pulse scale-125">
+                <Image
+                  src="/spell/shield/spell.svg"
+                  alt="Shield Effect"
+                  fill
+                  className="object-contain drop-shadow-[0_0_20px_rgba(168,85,247,0.9)]"
+                  style={{
+                    filter: 'brightness(1.2)',
+                  }}
+                />
+              </div>
+            )}
+            
+            {/* Le personnage */}
             <Image
               src={
-                characterPose === 'fireball' 
+                characterPose === 'shield'
+                  ? `/MC/MC-pose-shield.svg`
+                  : characterPose === 'fireball' 
                   ? `/MC/MC-pose-fireball.svg`
                   : characterPose === 'ice'
                   ? `/MC/MC-pose-ice.svg`
