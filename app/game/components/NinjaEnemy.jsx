@@ -18,7 +18,8 @@ export default function NinjaEnemy({
   onDeath,
   onSpellCast,
   scrollSpeed = 0,
-  health: externalHealth
+  health: externalHealth,
+  isPaused = false
 }) {
   const [position, setPosition] = useState({ x: startX, y: startY });
   const [health, setHealth] = useState(5);
@@ -44,7 +45,7 @@ export default function NinjaEnemy({
 
   // Timer pour lancer le sort (entre 3-5 secondes)
   useEffect(() => {
-    if (!hasLaunchedSpell && !isDead) {
+    if (!hasLaunchedSpell && !isDead && !isPaused) {
       const delay = 1000 + Math.random() * 2000; // Entre 1000ms et 3000ms
       
       spellTimerRef.current = setTimeout(() => {
@@ -57,11 +58,11 @@ export default function NinjaEnemy({
         clearTimeout(spellTimerRef.current);
       }
     };
-  }, [hasLaunchedSpell, isDead]);
+  }, [hasLaunchedSpell, isDead, isPaused]);
 
   // Animation du mouvement
   useEffect(() => {
-    if (isDead) return;
+    if (isDead || isPaused) return;
 
     let frameId;
 
@@ -91,7 +92,7 @@ export default function NinjaEnemy({
     return () => {
       if (frameId) cancelAnimationFrame(frameId);
     };
-  }, [isDead, id, onReachPlayer, scrollSpeed]);
+  }, [isDead, id, onReachPlayer, scrollSpeed, isPaused]);
 
   // Fonction pour lancer le sort
   const launchSpell = () => {

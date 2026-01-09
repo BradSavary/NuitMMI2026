@@ -61,7 +61,8 @@ export default function SpellHUD({ detectedSpell, onSpellReady, spellCooldown = 
       setShowSpell(false);
       setIsPulsing(false);
     }
-  }, [detectedSpell, onSpellReady]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detectedSpell]);
 
   if (!showSpell || !detectedSpell) return null;
 
@@ -131,7 +132,7 @@ export default function SpellHUD({ detectedSpell, onSpellReady, spellCooldown = 
 
           {/* Info du sort */}
           <div className="flex flex-col">
-            <h3 className="text-xl font-bold text-white drop-shadow-lg">
+            <h3 className="text-xl font-bold text-white drop-shadow-lg pixel-font">
               {spell.name}
             </h3>
             <p className={`text-sm ${colors.textColor} opacity-90`}>
