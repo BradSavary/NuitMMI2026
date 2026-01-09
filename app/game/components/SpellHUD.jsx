@@ -50,7 +50,8 @@ export default function SpellHUD({ detectedSpell, onSpellReady, spellCooldown = 
   useEffect(() => {
     if (detectedSpell && spellMapping[detectedSpell]) {
       setShowSpell(true);
-      setIsPulsing(true);
+      // Ne pulser que si en cooldown
+      setIsPulsing(spellCooldown);
       
       // Notifier que le sort est prêt
       if (onSpellReady) {
@@ -69,7 +70,7 @@ export default function SpellHUD({ detectedSpell, onSpellReady, spellCooldown = 
       setIsPulsing(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [detectedSpell]);
+  }, [detectedSpell, spellCooldown]); // Ajouter spellCooldown comme dépendance
 
   if (!showSpell || !detectedSpell) return null;
 
@@ -135,6 +136,7 @@ export default function SpellHUD({ detectedSpell, onSpellReady, spellCooldown = 
           rounded-xl p-4 shadow-2xl
           transition-all duration-300
           ${isPulsing ? 'animate-pulse scale-105' : 'scale-100'}
+          ${spellCooldown ? 'opacity-50 grayscale' : 'opacity-100'}
         `}
       >
         {/* Icône du sort */}
@@ -167,24 +169,7 @@ export default function SpellHUD({ detectedSpell, onSpellReady, spellCooldown = 
             )}
           </div>
         </div>
-
-        {/* Barre de temps restant */}
-        <div className={`mt-3 h-1 ${colors.barBg} rounded-full overflow-hidden`}>
-          <div
-            className={`h-full bg-linear-to-r ${colors.barGradient}`}
-            style={{
-              animation: 'shrink 5s linear forwards'
-            }}
-          />
-        </div>
       </div>
-
-      <style jsx>{`
-        @keyframes shrink {
-          from { width: 100%; }
-          to { width: 0%; }
-        }
-      `}</style>
     </div>
   );
 }

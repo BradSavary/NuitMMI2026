@@ -30,12 +30,16 @@ export default function LevelPage({ params }) {
   const [detectedGesture, setDetectedGesture] = useState(null);
   const [readySpell, setReadySpell] = useState(null);
   const [activeProjectiles, setActiveProjectiles] = useState([]);
+  const [gestureDetectionEnabled, setGestureDetectionEnabled] = useState(true);
   const projectileIdRef = useRef(0);
   
-  // Cooldown des sorts (1 seconde)
+  // Cooldown des sorts
   const [spellCooldown, setSpellCooldown] = useState(false);
+  const [currentCooldownDuration, setCurrentCooldownDuration] = useState(300);
   const lastSpellTimeRef = useRef(0);
-  const SPELL_COOLDOWN_MS = 300; // 1 seconde
+  const SPELL_COOLDOWN_MS = 300; // 300ms pour les sorts offensifs
+  const SHIELD_COOLDOWN_MS = 2000; // 2000ms (2 secondes) pour le shield
+  const GESTURE_DETECTION_DELAY_MS = 300; // 300ms avant nouvelle détection
   
   // État du chargement et détection des mains
   const [isLoading, setIsLoading] = useState(true);
@@ -47,10 +51,7 @@ export default function LevelPage({ params }) {
   const [isGameOver, setIsGameOver] = useState(false);
   const [isInvincible, setIsInvincible] = useState(false);
   const [shieldActive, setShieldActive] = useState(false);
-  const [shieldCooldown, setShieldCooldown] = useState(false);
-  const shieldCooldownTimeRef = useRef(0);
   const SHIELD_DURATION_MS = 1500; // 1.5 secondes
-  const SHIELD_COOLDOWN_MS = 3000; // 3 secondes
   
   // État des ennemis
   const [ninjas, setNinjas] = useState([]);
@@ -543,24 +544,31 @@ export default function LevelPage({ params }) {
   const launchSpell = (spell) => {
     if (isGameOver) return;
     
+    // Déterminer le cooldown nécessaire selon le type de sort
+    const requiredCooldown = spell.isDefensive ? SHIELD_COOLDOWN_MS : SPELL_COOLDOWN_MS;
+    
+    // Vérifier le cooldown commun pour TOUS les sorts
+    const now = Date.now();
+    if (spellCooldown || (now - lastSpellTimeRef.current) < requiredCooldown) {
+      console.log('Sort en cooldown, veuillez attendre...');
+      return;
+    }
+    
     // Si c'est un sort défensif (shield)
     if (spell.isDefensive) {
-      // Vérifier le cooldown spécifique du shield
-      const now = Date.now();
-      if (shieldCooldown || (now - shieldCooldownTimeRef.current) < SHIELD_COOLDOWN_MS) {
-        console.log('Shield en cooldown, veuillez attendre...');
-        return;
-      }
-      
       // Activer le shield
       console.log('🛡️ Shield activé !');
       setShieldActive(true);
       setIsInvincible(true);
       setCharacterPose('shield');
       
-      // Activer le cooldown du shield
-      setShieldCooldown(true);
-      shieldCooldownTimeRef.current = now;
+      // Activer le cooldown commun avec la durée du shield
+      setSpellCooldown(true);
+      setCurrentCooldownDuration(SHIELD_COOLDOWN_MS);
+      lastSpellTimeRef.current = now;
+      
+      // Jouer le son du shield
+      playSound('shield');
       
       // Désactiver le shield après 1.5 secondes
       setTimeout(() => {
@@ -570,38 +578,37 @@ export default function LevelPage({ params }) {
         console.log('🛡️ Shield désactivé');
       }, SHIELD_DURATION_MS);
       
-      // Réactiver le shield après le cooldown (3 secondes)
+      // Réactiver les sorts après le cooldown du shield (plus long)
       setTimeout(() => {
-        setShieldCooldown(false);
-        console.log('🛡️ Shield prêt à être réutilisé');
+        setSpellCooldown(false);
       }, SHIELD_COOLDOWN_MS);
       
       // Réinitialiser la détection
       setDetectedGesture(null);
       setReadySpell(null);
       
+      // Bloquer la détection de gestes
+      setGestureDetectionEnabled(false);
+      setTimeout(() => {
+        setGestureDetectionEnabled(true);
+      }, GESTURE_DETECTION_DELAY_MS);
+      
       return; // Ne pas créer de projectile pour le shield
     }
     
-    // Pour les sorts offensifs (fireball, ice)
+    // Pour les sorts offensifs (fireball, ice, earthquake)
     // Bloquer si le shield est actif
     if (shieldActive) {
       console.log('Impossible de lancer un sort pendant que le shield est actif');
       return;
     }
     
-    // Vérifier le cooldown
-    const now = Date.now();
-    if (spellCooldown || (now - lastSpellTimeRef.current) < SPELL_COOLDOWN_MS) {
-      console.log('Sort en cooldown, veuillez attendre...');
-      return;
-    }
-    
-    // Activer le cooldown
+    // Activer le cooldown commun avec la durée normale
     setSpellCooldown(true);
+    setCurrentCooldownDuration(SPELL_COOLDOWN_MS);
     lastSpellTimeRef.current = now;
     
-    // Désactiver le cooldown après 1 seconde
+    // Désactiver le cooldown après SPELL_COOLDOWN_MS
     setTimeout(() => {
       setSpellCooldown(false);
     }, SPELL_COOLDOWN_MS);
@@ -641,6 +648,12 @@ export default function LevelPage({ params }) {
     setDetectedGesture(null);
     setReadySpell(null);
     
+    // 3.5. Bloquer la détection de gestes pendant GESTURE_DETECTION_DELAY_MS
+    setGestureDetectionEnabled(false);
+    setTimeout(() => {
+      setGestureDetectionEnabled(true);
+    }, GESTURE_DETECTION_DELAY_MS);
+    
     // 4. Revenir à la pose neutre après 500ms
     setTimeout(() => {
       setCharacterPose('neutral');
@@ -649,6 +662,11 @@ export default function LevelPage({ params }) {
 
   // Callback quand un geste est détecté
   const handleGestureDetected = (gesture, confidence) => {
+    // Ignorer les gestes si la détection est bloquée
+    if (!gestureDetectionEnabled) {
+      return;
+    }
+    
     console.log('Geste détecté:', gesture, 'confiance:', confidence);
     setDetectedGesture(gesture);
     
@@ -1027,6 +1045,12 @@ export default function LevelPage({ params }) {
           onSpellReady={handleSpellReady}
           spellCooldown={spellCooldown}
         />
+
+        {/* Indicateur de cooldown global des sorts */}
+        {/* <SpellCooldownIndicator 
+          isOnCooldown={spellCooldown}
+          cooldownDuration={currentCooldownDuration}
+        /> */}
 
         {/* Caméra et détection de gestes */}
         <GestureCamera 
