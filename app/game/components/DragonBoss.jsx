@@ -17,7 +17,8 @@ export default function DragonBoss({
   startY,
   onDeath,
   onSpellCast,
-  health: externalHealth
+  health: externalHealth,
+  isPaused = false
 }) {
   const [health, setHealth] = useState(30);
   const [isDead, setIsDead] = useState(false);
@@ -40,18 +41,18 @@ export default function DragonBoss({
 
   // Animation idle - Alterne entre Dragon1 et Dragon2 toutes les 500ms
   useEffect(() => {
-    if (isDead) return;
+    if (isDead || isPaused) return;
 
     const interval = setInterval(() => {
       setDragonFrame(prev => prev === 1 ? 2 : 1);
     }, 500);
 
     return () => clearInterval(interval);
-  }, [isDead]);
+  }, [isDead, isPaused]);
 
   // Timer pour lancer des sorts toutes les 3 secondes
   useEffect(() => {
-    if (isDead) return;
+    if (isDead || isPaused) return;
 
     // Première attaque après 2 secondes
     const initialDelay = setTimeout(() => {
@@ -69,7 +70,7 @@ export default function DragonBoss({
         clearInterval(spellIntervalRef.current);
       }
     };
-  }, [isDead]);
+  }, [isDead, isPaused]);
 
   // Fonction pour lancer un sort
   const launchSpell = () => {

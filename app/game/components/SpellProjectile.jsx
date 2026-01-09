@@ -14,7 +14,8 @@ export default function SpellProjectile({
   startX, 
   startY, 
   onDestroy, 
-  id 
+  id,
+  isPaused = false
 }) {
   const [position, setPosition] = useState({ x: startX, y: startY });
   const [particles, setParticles] = useState([]);
@@ -50,6 +51,8 @@ export default function SpellProjectile({
   const spellConfig = config[spell?.element] || config.fireball;
 
   useEffect(() => {
+    if (isPaused) return;
+    
     let frameId;
 
     const animate = () => {
@@ -100,10 +103,12 @@ export default function SpellProjectile({
     return () => {
       if (frameId) cancelAnimationFrame(frameId);
     };
-  }, [id, onDestroy, spellConfig]);
+  }, [id, onDestroy, spellConfig, isPaused]);
 
   // Animation des particules avec requestAnimationFrame au lieu de setInterval
   useEffect(() => {
+    if (isPaused) return;
+    
     let animId;
     let lastTime = Date.now();
     
@@ -131,7 +136,7 @@ export default function SpellProjectile({
     return () => {
       if (animId) cancelAnimationFrame(animId);
     };
-  }, []);
+  }, [isPaused]);
 
   if (!spell) return null;
 
