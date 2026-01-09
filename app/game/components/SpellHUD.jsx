@@ -32,7 +32,7 @@ export default function SpellHUD({ detectedSpell, onSpellReady, spellCooldown = 
     },
     fistRaised: {
       name: "Shield",
-      icon: "/spell/shield/spell.svg",
+      icon: "/spell/shield/spell.png",
       element: "shield",
       description: "Bouclier protecteur",
       pose: "shield",
